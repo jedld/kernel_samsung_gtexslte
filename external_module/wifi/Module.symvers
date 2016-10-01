@@ -1,0 +1,2 @@
+0xaa07e27d	wlan_module_exit	/home/jedld/omni/kernel/samsung/gtexslte/external_module/wifi/sprdwl	EXPORT_SYMBOL_GPL
+0x3178cafb	wlan_module_init	/home/jedld/omni/kernel/samsung/gtexslte/external_module/wifi/sprdwl	EXPORT_SYMBOL_GPL
