@@ -21,6 +21,7 @@ JOBS=`grep processor /proc/cpuinfo | wc -l`
 
 function build_kernel() {
 	make ${DEFCONFIG}
+	make headers_install
 	make -j${JOBS}
 	make modules
 	make dtbs

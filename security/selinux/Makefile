@@ -2,11 +2,11 @@
 # Makefile for building the SELinux module as part of the kernel tree.
 #
 
-ifeq ($(CONFIG_SAMSUNG_PRODUCT_SHIP),y)
-ifeq ($(SEC_BUILD_OPTION_SELINUX_ENFORCE),true)
-EXTRA_CFLAGS += -DCONFIG_ALWAYS_ENFORCE=false
-endif
-endif
+# ifeq ($(CONFIG_SAMSUNG_PRODUCT_SHIP),y)
+# ifeq ($(SEC_BUILD_OPTION_SELINUX_ENFORCE),true)
+# EXTRA_CFLAGS += -DCONFIG_ALWAYS_ENFORCE=false
+# endif
+# endif
 
 obj-$(CONFIG_SECURITY_SELINUX) := selinux.o
 
