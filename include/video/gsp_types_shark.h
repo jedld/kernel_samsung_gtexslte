@@ -178,13 +178,13 @@ extern   "C"
         GSP_KERNEL_GEN_ALLOC_ERR = 0x8A,
         GSP_KERNEL_GEN_COMMON_ERR = 0x8B,
         GSP_KERNEL_WAITDONE_TIMEOUT = 0x8C,
-        GSP_KERNEL_WAITDONE_INTR = 0x8D,        
+        GSP_KERNEL_WAITDONE_INTR = 0x8D,
         GSP_KERNEL_FORCE_EXIT = 0x8E,//not an err
         GSP_KERNEL_CTL_CMD_ERR = 0x8F,//not an err
         GSP_KERNEL_ADDR_MAP_ERR = 0x90,//iommu map err
         GSP_KERNEL_CLOCK_ERR = 0x91,//gsp relative clock check failed
         /*GSP kernel driver defined err code, end*/
-		
+
 		/*GSP HAL defined err code, start*/
 
 		GSP_HAL_PARAM_ERR = 0xA0,// common hal interface parameter err
@@ -436,8 +436,8 @@ typedef struct __GSP_Capability_
 
 #define GSP_IO_MAGIC                'G'
 #define GSP_IO_SET_PARAM            _IOW(GSP_IO_MAGIC, GSP_SET_PARAM,GSP_CONFIG_INFO_T)
-//#define GSP_IO_TRIGGER_RUN          _IO(GSP_IO_MAGIC, GSP_TRIGGER_RUN)
-//#define GSP_IO_WAIT_FINISH          _IO(GSP_IO_MAGIC, GSP_WAIT_FINISH)
+#define GSP_IO_TRIGGER_RUN          _IO(GSP_IO_MAGIC, GSP_TRIGGER_RUN)
+#define GSP_IO_WAIT_FINISH          _IO(GSP_IO_MAGIC, GSP_WAIT_FINISH)
 #define GSP_IO_GET_CAPABILITY	     _IOW(GSP_IO_MAGIC, GSP_GET_CAPABILITY,GSP_CAPABILITY_T)
 //#define GSP_IO_GET_ADDR_TYPE          _IO(GSP_IO_MAGIC, GSP_GET_ADDR_TYPE)
 
