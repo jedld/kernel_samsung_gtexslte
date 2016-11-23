@@ -450,6 +450,12 @@ config UID_STAT
 	bool "UID based statistics tracking exported to /proc/uid_stat"
 	default n
 
+config UID_CPUTIME
+	tristate "Per-UID cpu time statistics"
+	depends on PROFILING
+	help
+	  Per UID based cpu time statistics exported to /proc/uid_cputime
+
 config VMWARE_BALLOON
 	tristate "VMware Balloon Driver"
 	depends on X86 && HYPERVISOR_GUEST
