@@ -3154,7 +3154,7 @@ static int selinux_file_ioctl(struct file *file, unsigned int cmd,
 	 * to the file's ioctl() function.
 	 */
 	default:
-		error = file_has_perm(cred, file, FILE__IOCTL);
+		error = ioctl_has_perm(cred, file, FILE__IOCTL);
 	}
 	return error;
 }

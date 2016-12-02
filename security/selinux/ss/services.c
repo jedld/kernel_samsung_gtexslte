@@ -92,9 +92,9 @@ static int context_struct_to_string(struct context *context, char **scontext,
 				    u32 *scontext_len);
 
 static void context_struct_compute_av(struct context *scontext,
-				      struct context *tcontext,
-				      u16 tclass,
-				      struct av_decision *avd);
+ 				      struct context *tcontext,
+ 				      u16 tclass,
+ 				      struct av_decision *avd);
 
 struct selinux_mapping {
 	u16 value; /* policy value */
@@ -612,13 +612,13 @@ static void type_attribute_bounds_av(struct context *scontext,
 }
 
 /*
- * Compute access vectors based on a context structure pair for
- * the permissions in a particular class.
+  * Compute access vectors based on a context structure pair for
+  * the permissions in a particular class.
  */
 static void context_struct_compute_av(struct context *scontext,
-				      struct context *tcontext,
-				      u16 tclass,
-				      struct av_decision *avd)
+ 				      struct context *tcontext,
+ 				      u16 tclass,
+ 				      struct av_decision *avd)
 {
 	struct constraint_node *constraint;
 	struct role_allow *ra;
@@ -901,13 +901,13 @@ static void avd_init(struct av_decision *avd)
 	avd->flags = 0;
 }
 
-
 /**
  * security_compute_av - Compute access vector decisions.
  * @ssid: source security identifier
  * @tsid: target security identifier
  * @tclass: target security class
  * @avd: access vector decisions
+ * @xperms: extended permissions
  *
  * Compute a set of access vector decisions based on the
  * SID pair (@ssid, @tsid) for the permissions in @tclass.
@@ -2346,7 +2346,7 @@ int security_fs_use(
 {
 	int rc = 0;
 	struct ocontext *c;
-	//SEC_SELinux : when sdcardd(maybe also other daemon) try to mount filesystem which uses xattr type, 
+	//SEC_SELinux : when sdcardd(maybe also other daemon) try to mount filesystem which uses xattr type,
 	//filesystem has wrong contexts(unlabeled) because two or more daemons enter same time at critical section but that is not handled.
 	u32 tmpsid;
 

@@ -7,7 +7,7 @@
 
 set -e -o pipefail
 
-export CROSS_COMPILE=~/omni/prebuilts/gcc/linux-x86/arm/arm-eabi-4.8/bin/arm-eabi-
+export CROSS_COMPILE=~/Downloads/android-ndk-r13/toolchains/arm-linux-androideabi-4.9/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-
 export ARCH=arm
 
 PLATFORM=sc8830
@@ -17,16 +17,16 @@ KERNEL_PATH=$(pwd)
 MODULE_PATH=${KERNEL_PATH}/modules
 EXTERNAL_MODULE_PATH=${KERNEL_PATH}/external_module
 
-JOBS=`grep processor /proc/cpuinfo | wc -l`
+# JOBS=`grep processor /proc/cpuinfo | wc -l`
 
 function build_kernel() {
-	make ${DEFCONFIG}
-	make headers_install
-	make -j${JOBS}
-	make modules
-	make dtbs
-	make -C ${EXTERNAL_MODULE_PATH}/wifi KDIR=${KERNEL_PATH}
-	make -C ${EXTERNAL_MODULE_PATH}/mali MALI_PLATFORM=${PLATFORM} BUILD=release KDIR=${KERNEL_PATH}
+	$(MAKE) ${DEFCONFIG}
+	$(MAKE) headers_install
+	$(MAKE) -j${JOBS}
+	$(MAKE) modules
+	$(MAKE) dtbs
+	$(MAKE) -C ${EXTERNAL_MODULE_PATH}/wifi KDIR=${KERNEL_PATH}
+	$(MAKE) -C ${EXTERNAL_MODULE_PATH}/mali MALI_PLATFORM=${PLATFORM} BUILD=release KDIR=${KERNEL_PATH}
 
 	[ -d ${MODULE_PATH} ] && rm -rf ${MODULE_PATH}
 	mkdir -p ${MODULE_PATH}
@@ -37,7 +37,7 @@ function build_kernel() {
 
 function clean() {
 	[ -d ${MODULE_PATH} ] && rm -rf ${MODULE_PATH}
-	make distclean
+	$(MAKE) distclean
 }
 
 function main() {

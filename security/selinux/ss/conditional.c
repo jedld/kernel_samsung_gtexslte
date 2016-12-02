@@ -617,10 +617,11 @@ int cond_write_list(struct policydb *p, struct cond_node *list, void *fp)
 
 	return 0;
 }
+
 /* Determine whether additional permissions are granted by the conditional
  * av table, and if so, add them to the result
  */
-void cond_compute_av(struct avtab *ctab, struct avtab_key *key, struct av_decision *avd)
+ void cond_compute_av(struct avtab *ctab, struct avtab_key *key, struct av_decision *avd)
 {
 	struct avtab_node *node;
 
@@ -642,7 +643,10 @@ void cond_compute_av(struct avtab *ctab, struct avtab_key *key, struct av_decisi
 			avd->auditdeny &= node->datum.data;
 		if ((u16)(AVTAB_AUDITALLOW|AVTAB_ENABLED) ==
 		    (node->key.specified & (AVTAB_AUDITALLOW|AVTAB_ENABLED)))
-			avd->auditallow |= node->datum.data;
+				avd->auditallow |= node->datum.data;
+		if ((node->key.specified & AVTAB_ENABLED) &&
+				(node->key.specified & AVTAB_XPERMS))
+			services_compute_xperms_drivers(xperms, node);
 	}
 	return;
 }

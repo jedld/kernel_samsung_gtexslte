@@ -56,6 +56,16 @@ struct avc_node {
 	struct rcu_head		rhead;
 };
 
+struct avc_xperms_decision_node {
+	struct extended_perms_decision xpd;
+	struct list_head xpd_list; /* list of extended_perms_decision */
+};
+
+struct avc_xperms_node {
+	struct extended_perms xp;
+	struct list_head xpd_head; /* list head of extended_perms_decision */
+};
+
 struct avc_cache {
 	struct hlist_head	slots[AVC_CACHE_SLOTS]; /* head for avc_node->list */
 	spinlock_t		slots_lock[AVC_CACHE_SLOTS]; /* lock for writes */
@@ -170,7 +180,7 @@ void __init avc_init(void)
 	atomic_set(&avc_cache.lru_hint, 0);
 
 	avc_node_cachep = kmem_cache_create("avc_node", sizeof(struct avc_node),
-					     0, SLAB_PANIC, NULL);
+					0, SLAB_PANIC, NULL);
 
 	audit_log(current->audit_context, GFP_KERNEL, AUDIT_KERNEL, "AVC INITIALIZED\n");
 }
@@ -679,24 +689,20 @@ static noinline struct avc_node *avc_compute_av(u32 ssid, u32 tsid,
 }
 
 static noinline int avc_denied(u32 ssid, u32 tsid,
-			 u16 tclass, u32 requested,
-			 unsigned flags,
-			 struct av_decision *avd)
+ 			 u16 tclass, u32 requested,
+ 			 unsigned flags,
+ 			 struct av_decision *avd)
 {
 	if (flags & AVC_STRICT)
 		return -EACCES;
-#ifdef CONFIG_ALWAYS_ENFORCE
-	if (!(avd->flags & AVD_FLAGS_PERMISSIVE))
-#else
+
 	if (selinux_enforcing && !(avd->flags & AVD_FLAGS_PERMISSIVE))
-#endif
 		return -EACCES;
 
-	avc_update_node(AVC_CALLBACK_GRANT, requested, ssid,
-				tsid, tclass, avd->seqno);
+ 	avc_update_node(AVC_CALLBACK_GRANT, requested, ssid,
+ 				tsid, tclass, avd->seqno);
 	return 0;
 }
-
 
 /**
  * avc_has_perm_noaudit - Check permissions but perform no auditing.
@@ -724,6 +730,7 @@ inline int avc_has_perm_noaudit(u32 ssid, u32 tsid,
 			 struct av_decision *avd)
 {
 	struct avc_node *node;
+	struct avc_xperms_node xp_node;
 	int rc = 0;
 	u32 denied;
 
@@ -732,12 +739,12 @@ inline int avc_has_perm_noaudit(u32 ssid, u32 tsid,
 	rcu_read_lock();
 
 	node = avc_lookup(ssid, tsid, tclass);
-	if (unlikely(!node)) {
-		node = avc_compute_av(ssid, tsid, tclass, avd);
-	} else {
+ 	if (unlikely(!node)) {
+ 		node = avc_compute_av(ssid, tsid, tclass, avd);
+ 	} else {
 		memcpy(avd, &node->ae.avd, sizeof(*avd));
-		avd = &node->ae.avd;
-	}
+ 		avd = &node->ae.avd;
+ 	}
 
 	denied = requested & ~(avd->allowed);
 	if (unlikely(denied))
