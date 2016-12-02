@@ -131,8 +131,7 @@ struct extended_perms {
 #define AVD_FLAGS_PERMISSIVE	0x0001
 
 void security_compute_av(u32 ssid, u32 tsid,
-			 u16 tclass, struct av_decision *avd,
-			 struct extended_perms *xperms);
+			 u16 tclass, struct av_decision *avd);
 
 void security_compute_xperms_decision(u32 ssid, u32 tsid, u16 tclass,
 			 u8 driver, struct extended_perms_decision *xpermd);
