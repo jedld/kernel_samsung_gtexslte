@@ -1161,7 +1161,7 @@ static unsigned long maybe_relocated(unsigned long crc,
 static int check_version(Elf_Shdr *sechdrs,
 			 unsigned int versindex,
 			 const char *symname,
-			 struct module *mod, 
+			 struct module *mod,
 			 const unsigned long *crc,
 			 const struct module *crc_owner)
 {
@@ -1231,7 +1231,7 @@ static inline int same_magic(const char *amagic, const char *bmagic,
 static inline int check_version(Elf_Shdr *sechdrs,
 				unsigned int versindex,
 				const char *symname,
-				struct module *mod, 
+				struct module *mod,
 				const unsigned long *crc,
 				const struct module *crc_owner)
 {
@@ -2515,10 +2515,6 @@ static int copy_module_from_user(const void __user *umod, unsigned long len,
 	if (info->len < sizeof(*(info->hdr)))
 		return -ENOEXEC;
 
-	err = security_kernel_module_from_file(NULL);
-	if (err)
-		return err;
-
 	/* Suck in entire file: we'll want most of it. */
 	info->hdr = vmalloc(info->len);
 	if (!info->hdr)
@@ -2544,10 +2540,6 @@ static int copy_module_from_fd(int fd, struct load_info *info)
 	file = fget(fd);
 	if (!file)
 		return -ENOEXEC;
-
-	err = security_kernel_module_from_file(file);
-	if (err)
-		goto out;
 
 	err = vfs_getattr(&file->f_path, &stat);
 	if (err)

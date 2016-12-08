@@ -13,6 +13,7 @@
 #include <linux/types.h>
 #include "flask.h"
 
+// #define CONFIG_ALWAYS_ENFORCE 0
 #define SECSID_NULL			0x00000000 /* unspecified SID */
 #define SECSID_WILD			0xffffffff /* wildcard SID */
 #define SECCLASS_NULL			0x0000 /* no class */
@@ -258,4 +259,3 @@ extern void selnl_notify_policyload(u32 seqno);
 extern int selinux_nlmsg_lookup(u16 sclass, u16 nlmsg_type, u32 *perm);
 
 #endif /* _SELINUX_SECURITY_H_ */
-

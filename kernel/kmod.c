@@ -153,17 +153,13 @@ int __request_module(bool wait, const char *fmt, ...)
 	if (ret >= MODULE_NAME_LEN)
 		return -ENAMETOOLONG;
 
-	ret = security_kernel_module_request(module_name);
-	if (ret)
-		return ret;
-
 	/* If modprobe needs a service that is in a module, we get a recursive
 	 * loop.  Limit the number of running kmod threads to max_threads/2 or
 	 * MAX_KMOD_CONCURRENT, whichever is the smaller.  A cleaner method
 	 * would be to run the parents of this process, counting how many times
 	 * kmod was invoked.  That would mean accessing the internals of the
 	 * process tables to get the command line, proc_pid_cmdline is static
-	 * and it is not worth changing the proc code just to handle this case. 
+	 * and it is not worth changing the proc code just to handle this case.
 	 * KAO.
 	 *
 	 * "trace the ppid" is simple, but will fail if someone's
