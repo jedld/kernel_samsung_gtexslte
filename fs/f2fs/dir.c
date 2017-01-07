@@ -13,6 +13,7 @@
 #include "f2fs.h"
 #include "node.h"
 #include "acl.h"
+#include "xattr.h"
 
 static unsigned long dir_blocks(struct inode *inode)
 {
@@ -339,6 +340,11 @@ static int init_inode_metadata(struct inode *inode,
 			remove_inode_page(inode);
 			return err;
 		}
+
+		err = f2fs_init_security(inode, dir, name, NULL);
+		if (err)
+			return err;
+			
 	} else {
 		struct page *ipage;
 		ipage = get_node_page(F2FS_SB(dir->i_sb), inode->i_ino);
