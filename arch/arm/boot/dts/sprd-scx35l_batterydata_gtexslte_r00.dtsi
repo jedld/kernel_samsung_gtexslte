@@ -22,7 +22,7 @@
 		vmode = <0>; /* 1=Voltage mode, 0=mixed mode */
 		alm_soc = <5>; /* SOC alm level %*/
 		alm_vbat = <3450>; /* Vbat alm level mV*/
-		rint = <250>; /*battery internal impedance*/
+		rint = <200>; /*battery internal impedance*/
 		cnom = <3950>; /* nominal capacity in mAh */
 		rsense_real = <235>; /* sense resistor 0.1mOhm from real environment*/
 		rsense_spec = <200>; /* sense resistor 0.1mOhm from specification*/
@@ -31,8 +31,8 @@
 		cnom_temp_tab = <1025 3950	/*value = 1000 + temp*/
 			1010 3850
 			1000 3800>;
-		rint_temp_tab = <1040 180
-			1025 250
+		rint_temp_tab = <1040 305
+			1025 200
 			1010 430
 			1000 500>;
 		ocv_table = <4295 100
