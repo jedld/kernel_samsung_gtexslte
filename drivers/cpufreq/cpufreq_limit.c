@@ -139,29 +139,6 @@ static struct notifier_block notifier_policy_block = {
 	.notifier_call = cpufreq_limit_notifier_policy
 };
 
-size_t cpufreq_limit_requests_get(int type)
-{
-	struct cpufreq_limit_handle *handle;
-	unsigned long min = 0, max = ULONG_MAX;
-	size_t ret = -1;
-
-	mutex_lock(&cpufreq_limit_lock);
-	list_for_each_entry(handle, &cpufreq_limit_requests, node) {
-		if (handle->min > min)
-			min = handle->min;
-		if (handle->max && handle->max < max)
-			max = handle->max;
-	}
-	mutex_unlock(&cpufreq_limit_lock);
-
-	if(type == CPUFREQ_MIN && min)
-		ret = min;
-	else if(type == CPUFREQ_MAX && max != ULONG_MAX)
-		ret = max;
-
-	return ret;
-}
-
 static ssize_t show_cpufreq_limit_requests(struct kobject *kobj,
 		struct attribute *attr, char *buf)
 {

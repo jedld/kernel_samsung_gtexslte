@@ -460,6 +460,8 @@ static ssize_t wakeup_count_store(struct kobject *kobj,
 power_attr(wakeup_count);
 
 #ifdef CONFIG_CPU_FREQ_LIMIT_USERSPACE
+static int cpufreq_max_limit_val = -1;
+static int cpufreq_min_limit_val = -1;
 struct cpufreq_limit_handle *cpufreq_max_hd;
 struct cpufreq_limit_handle *cpufreq_min_hd;
 DEFINE_MUTEX(cpufreq_limit_mutex);
@@ -511,7 +513,7 @@ static ssize_t cpufreq_max_limit_show(struct kobject *kobj,
 					struct kobj_attribute *attr,
 					char *buf)
 {
-	return sprintf(buf, "%d\n", cpufreq_limit_requests_get(CPUFREQ_MAX));
+	return sprintf(buf, "%d\n", cpufreq_max_limit_val);
 }
 
 static ssize_t cpufreq_max_limit_store(struct kobject *kobj,
@@ -536,6 +538,8 @@ static ssize_t cpufreq_max_limit_store(struct kobject *kobj,
 	if (val != -1)
 		cpufreq_max_hd = cpufreq_limit_max_freq(val, "user lock(max)");
 
+	cpufreq_max_hd ?
+		(cpufreq_max_limit_val = val) : (cpufreq_max_limit_val = -1);
 	ret = n;
 out:
 	mutex_unlock(&cpufreq_limit_mutex);
@@ -546,7 +550,7 @@ static ssize_t cpufreq_min_limit_show(struct kobject *kobj,
 					struct kobj_attribute *attr,
 					char *buf)
 {
-	return sprintf(buf, "%d\n", cpufreq_limit_requests_get(CPUFREQ_MIN));
+	return sprintf(buf, "%d\n", cpufreq_min_limit_val);
 }
 
 static ssize_t cpufreq_min_limit_store(struct kobject *kobj,
@@ -571,6 +575,8 @@ static ssize_t cpufreq_min_limit_store(struct kobject *kobj,
 	if (val != -1)
 		cpufreq_min_hd = cpufreq_limit_min_freq(val, "user lock(min)");
 
+	cpufreq_min_hd ?
+		(cpufreq_min_limit_val = val) : (cpufreq_min_limit_val = -1);
 	ret = n;
 out:
 	mutex_unlock(&cpufreq_limit_mutex);
@@ -593,6 +599,8 @@ int set_cpufreq_min_limit(int freq)
 	if (freq != -1)
 		cpufreq_min_hd = cpufreq_limit_min_freq(freq, "user lock(min)");
 
+	cpufreq_min_hd ?
+		(cpufreq_min_limit_val = freq) : (cpufreq_min_limit_val = -1);
 out:
 	mutex_unlock(&cpufreq_limit_mutex);
 	return 1;

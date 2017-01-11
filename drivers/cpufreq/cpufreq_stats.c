@@ -69,9 +69,7 @@ static int cpufreq_stats_update(unsigned int cpu)
 	struct cpufreq_stats *stat;
 	struct all_cpufreq_stats *all_stat;
 	unsigned long long cur_time;
-#if defined(CONFIG_MACH_SP9838AEA_5MOD) || defined(CONFIG_MACH_SP9838AEA_4CORE) || defined(CONFIG_MACH_SP9838AEA_8CORE_LIGHT_SLEEP)
-	return 0;
-#endif
+
 	cur_time = get_jiffies_64();
 	spin_lock(&cpufreq_stats_lock);
 	stat = per_cpu(cpufreq_stats_table, cpu);
