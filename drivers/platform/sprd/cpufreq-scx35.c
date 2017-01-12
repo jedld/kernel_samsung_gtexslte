@@ -284,7 +284,7 @@ static struct cpufreq_table_data sc9630_cpufreq_table_data = {
 #else
 static struct cpufreq_table_data sc9630_cpufreq_table_data = {
 	.freq_tbl = {
-		{OC1,  1600000},
+		{OC1, 1650000},
 		{NOC, 1500000},
 		{UC1, 1350000},
     {UC2, 1200000},
@@ -293,7 +293,7 @@ static struct cpufreq_table_data sc9630_cpufreq_table_data = {
 		{EC, CPUFREQ_TABLE_END},
 	},
 	.vddarm_mv = {
-		[OC1] = 1200000,
+		[OC1] = 1100000,
 		[NOC] = 1100000,
 		[UC1] = 1000000,
 		[UC2] = 1000000,
