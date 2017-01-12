@@ -1,3 +1,4 @@
 external_module/mali/.tmp_versions
 external_module/wifi/.tmp_versions/
+arch/arm/boot/dts/.sprd-scx35l*
 *.symvers
