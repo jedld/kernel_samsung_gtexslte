@@ -284,7 +284,7 @@ static struct cpufreq_table_data sc9630_cpufreq_table_data = {
 #else
 static struct cpufreq_table_data sc9630_cpufreq_table_data = {
 	.freq_tbl = {
-		{OC1, 1650000},
+		{OC1, 1560000},
 		{NOC, 1500000},
 		{UC1, 1350000},
     {UC2, 1200000},
@@ -751,12 +751,9 @@ static unsigned int sprd_cpufreq_getspeed(unsigned int cpu)
 
 static void sprd_set_cpureq_limit(void)
 {
-	int i;
-	struct cpufreq_frequency_table *tmp = sprd_cpufreq_conf->freq_tbl;
-	for (i = 0; (tmp[i].frequency != CPUFREQ_TABLE_END); i++) {
-		cpufreq_min_limit = min(tmp[i].frequency, cpufreq_min_limit);
-		cpufreq_max_limit = max(tmp[i].frequency, cpufreq_max_limit);
-	}
+	cpufreq_min_limit = sprd_cpufreq_conf->freq_tbl[UC4].frequency;
+	cpufreq_max_limit = sprd_cpufreq_conf->freq_tbl[OC1].frequency;
+
 	pr_info("--xing-- %s max=%u min=%u\n", __func__, cpufreq_max_limit, cpufreq_min_limit);
 }
 

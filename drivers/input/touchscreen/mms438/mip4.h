@@ -10,7 +10,7 @@
 
 //Config debug msg : Must be disabled for production builds
 #if 0	// 0 : disable, 1 : enable
-#define DEBUG	
+#define DEBUG
 #endif
 
 //Include
@@ -92,7 +92,7 @@
 #define MIP_R1_EVENT_PACKET_INFO			0x10
 #define MIP_R1_EVENT_PACKET_DATA			0x11
 
-#define MIP_R0_CTRL						0x06	
+#define MIP_R0_CTRL						0x06
 #define MIP_R1_CTRL_READY_STATUS			0x00
 #define MIP_R1_CTRL_EVENT_READY			0x01
 #define MIP_R1_CTRL_MODE					0x10
@@ -157,7 +157,7 @@
 
 #define MIP_EVENT_GESTURE_C				1
 #define MIP_EVENT_GESTURE_W				2
-#define MIP_EVENT_GESTURE_V				3	
+#define MIP_EVENT_GESTURE_V				3
 #define MIP_EVENT_GESTURE_M				4
 #define MIP_EVENT_GESTURE_S				5
 #define MIP_EVENT_GESTURE_Z				6
@@ -165,9 +165,9 @@
 #define MIP_EVENT_GESTURE_E				8
 #define MIP_EVENT_GESTURE_V_90			9
 #define MIP_EVENT_GESTURE_V_180			10
-#define MIP_EVENT_GESTURE_FLICK_RIGHT	20			
-#define MIP_EVENT_GESTURE_FLICK_DOWN	21		
-#define MIP_EVENT_GESTURE_FLICK_LEFT	22	
+#define MIP_EVENT_GESTURE_FLICK_RIGHT	20
+#define MIP_EVENT_GESTURE_FLICK_DOWN	21
+#define MIP_EVENT_GESTURE_FLICK_LEFT	22
 #define MIP_EVENT_GESTURE_FLICK_UP		23
 #define MIP_EVENT_GESTURE_DOUBLE_TAP	24
 #define MIP_EVENT_GESTURE_ALL			0xFFFFFFFF
@@ -183,7 +183,7 @@
 #define MIP_CTRL_STATUS_READY		0xA0
 #define MIP_CTRL_STATUS_LOG			0x77
 
-#define MIP_CTRL_MODE_NORMAL		0		
+#define MIP_CTRL_MODE_NORMAL		0
 #define MIP_CTRL_MODE_PARAM			1
 #define MIP_CTRL_MODE_TEST_CM		2
 
@@ -251,7 +251,7 @@
 #define RESET_ON_EVENT_ERROR			0	// 0 (default) or 1
 #define ESD_COUNT_FOR_DISABLE		7	// 7~
 #if defined(CONFIG_MACH_J1ACEVELTE)
-#define MIP_USE_CALLBACK	0	
+#define MIP_USE_CALLBACK	0
 #else
 #define MIP_USE_CALLBACK	1
 #endif
@@ -329,7 +329,7 @@ struct mip_ts_info {
 
 	dev_t mip_dev;
 	struct class *class;
-	
+
 	struct mutex lock;
 	struct mutex lock_test;
 	struct mutex lock_cmd;
@@ -338,16 +338,16 @@ struct mip_ts_info {
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend early_suspend;
 #endif
-	
+
 	int irq;
 	bool enabled;
 	int power;
-	bool init;	
+	bool init;
 
 	struct pinctrl *pinctrl;
 	struct pinctrl_state *pins_enable;
 	struct pinctrl_state *pins_disable;
-	
+
 	u8 product_name[16];
 	int max_x;
 	int max_y;
@@ -358,26 +358,26 @@ struct mip_ts_info {
 
 	bool finger_state[MAX_FINGER_NUM];
 	u8 finger_cnt;
-	
+
 	u8 event_size;
 	int event_format;
 
 	bool key_enable;
 	int key_num;
 	int key_code[MAX_KEY_NUM];
-	
+
 	u8 nap_mode;
 	u8 glove_mode;
 	u8 charger_mode;
 	u8 cover_mode;
-	
+
 	u8 esd_cnt;
 	bool disable_esd;
 	u8 wakeup_gesture_code;
-	
-	u8 *print_buf;	
+
+	u8 *print_buf;
 	int *image_buf;
-	
+
 	bool test_busy;
 	bool cmd_busy;
 	bool dev_busy;
@@ -393,12 +393,12 @@ struct mip_ts_info {
 	int cmd_param[CMD_PARAM_NUM];
 	int cmd_buffer_size;
 	struct device *key_dev;
-#endif	
+#endif
 
 #if MIP_USE_DEV
 	struct cdev cdev;
 	u8 *dev_fs_buf;
-#endif	
+#endif
 
 #if MIP_USE_CALLBACK
 	struct mip_callbacks cb;
@@ -419,8 +419,8 @@ struct mip_bin_hdr {
 	u16	reserved0;
 
 	u32	binary_offset;
-	u32	binary_length;	
-	u32	extention_offset;	
+	u32	binary_length;
+	u32	extention_offset;
 	u32	reserved1;
 } __attribute__ ((packed));
 
@@ -465,7 +465,7 @@ struct mip_bin_tail {
 	u32 param_length;
 	u32 build_date;
 	u32 build_time;
-	
+
 	u32 reserved1;
 	u32 reserved2;
 	u16 reserved3;

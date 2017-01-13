@@ -28,6 +28,8 @@
 #include <linux/sched.h>
 #include <linux/async.h>
 #include <linux/suspend.h>
+#include <trace/events/power.h>
+#include <linux/cpufreq.h>
 #include <linux/cpuidle.h>
 #include <linux/timer.h>
 #include <linux/wakeup_reason.h>
@@ -701,7 +703,7 @@ static int device_resume(struct device *dev, pm_message_t state, bool async)
 	error = dpm_run_callback(callback, dev, state, info);
 	dev->power.is_suspended = false;
 	if(callback){
-		//printk("-------- resume %s %pf with %d\n", dev->kobj.name, callback, error);
+		printk("-------- resume %s %pf with %d\n", dev->kobj.name, callback, error);
 	}
 
  Unlock:
@@ -784,6 +786,8 @@ void dpm_resume(pm_message_t state)
 	mutex_unlock(&dpm_list_mtx);
 	async_synchronize_full();
 	dpm_show_time(starttime, state, NULL);
+
+	cpufreq_resume();
 }
 
 /**
@@ -937,7 +941,7 @@ static int device_suspend_noirq(struct device *dev, pm_message_t state)
 	}
 	error = dpm_run_callback(callback, dev, state, info);
 	if(callback){
-		//printk("-------- suspend %s %pf with %d\n", dev->kobj.name, callback, error);
+		printk("-------- suspend %s %pf with %d\n", dev->kobj.name, callback, error);
 	}
 
 	return error;
@@ -1034,7 +1038,7 @@ static int device_suspend_late(struct device *dev, pm_message_t state)
 	}
 	error = dpm_run_callback(callback, dev, state, info);
 	if(callback){
-		//printk("-------- suspend %s %pf with %d\n", dev->kobj.name, callback, error);
+		printk("-------- suspend %s %pf with %d\n", dev->kobj.name, callback, error);
 	}
 
 	return error;
@@ -1217,7 +1221,7 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 
 	error = dpm_run_callback(callback, dev, state, info);
 	if(callback){
-		//printk("-------- suspend %s %pf with %d\n", dev->kobj.name, callback, error);
+		printk("-------- suspend %s %pf with %d\n", dev->kobj.name, callback, error);
 	}
 
  End:
@@ -1277,6 +1281,8 @@ int dpm_suspend(pm_message_t state)
 	int error = 0;
 
 	might_sleep();
+
+	cpufreq_suspend();
 
 	mutex_lock(&dpm_list_mtx);
 	pm_transition = state;
