@@ -1164,13 +1164,13 @@ static inline void inc_nr_running(struct rq *rq)
 #endif
 
 #ifdef CONFIG_NO_HZ_FULL
-
+	
 		if (tick_nohz_full_cpu(rq->cpu)) {
 			/* Order rq->nr_running write against the IPI */
 			smp_wmb();
 			smp_send_reschedule(rq->cpu);
 		}
-
+      
 #endif
 	}
 }
