@@ -8,6 +8,7 @@
  * published by the Free Software Foundation.
  */
 
+#include <asm/assembler.h>
 #include <asm/unistd.h>
 #include <asm/ftrace.h>
 #include <asm/unwind.h>
@@ -32,7 +33,9 @@ ret_fast_syscall:
  UNWIND(.fnstart	)
  UNWIND(.cantunwind	)
 	disable_irq				@ disable interrupts
-	ldr	r1, [tsk, #TI_FLAGS]
+	ldr	r1, [tsk, #TI_FLAGS]		@ re-check for syscall tracing
+	tst	r1, #_TIF_SYSCALL_WORK
+	bne	__sys_trace_return
 	tst	r1, #_TIF_WORK_MASK
 	bne	fast_work_pending
 	asm_trace_hardirqs_on
@@ -88,7 +91,7 @@ ENTRY(ret_from_fork)
 	cmp	r5, #0
 	movne	r0, r4
 	adrne	lr, BSYM(1f)
-	movne	pc, r5
+	retne	r5
 1:	get_thread_info tsk
 	b	ret_slow_syscall
 ENDPROC(ret_from_fork)
@@ -290,7 +293,7 @@ ENDPROC(ftrace_graph_caller_old)
 
 .macro mcount_exit
 	ldmia	sp!, {r0-r3, ip, lr}
-	mov	pc, ip
+	ret	ip
 .endm
 
 ENTRY(__gnu_mcount_nc)
@@ -298,7 +301,7 @@ UNWIND(.fnstart)
 #ifdef CONFIG_DYNAMIC_FTRACE
 	mov	ip, lr
 	ldmia	sp!, {lr}
-	mov	pc, ip
+	ret	ip
 #else
 	__mcount
 #endif
@@ -333,12 +336,12 @@ return_to_handler:
 	bl	ftrace_return_to_handler
 	mov	lr, r0			@ r0 has real ret addr
 	ldmia	sp!, {r0-r3}
-	mov	pc, lr
+	ret	lr
 #endif
 
 ENTRY(ftrace_stub)
 .Lftrace_stub:
-	mov	pc, lr
+	ret	lr
 ENDPROC(ftrace_stub)
 
 #endif /* CONFIG_FUNCTION_TRACER */
@@ -563,7 +566,7 @@ sys_mmap2:
 		streq	r5, [sp, #4]
 		beq	sys_mmap_pgoff
 		mov	r0, #-EINVAL
-		mov	pc, lr
+		ret	lr
 #else
 		str	r5, [sp, #4]
 		b	sys_mmap_pgoff
