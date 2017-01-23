@@ -26,6 +26,7 @@ function build_kernel() {
 	make -j${JOBS}
 	make modules
 	make dtbs
+	./scripts/mkdtimg.sh -i ${KERNEL_PATH}/arch/arm/boot/dts/ -o dt.img
 	make -C ${EXTERNAL_MODULE_PATH}/wifi KDIR=${KERNEL_PATH}
 	make -C ${EXTERNAL_MODULE_PATH}/mali MALI_PLATFORM=${PLATFORM} BUILD=release KDIR=${KERNEL_PATH}
 
