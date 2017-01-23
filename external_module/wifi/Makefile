@@ -27,14 +27,8 @@ else
 # Define host system directory
 KDIR-$(shell uname -m):=/lib/modules/$(shell uname -r)/build
 
-ifeq ($(ARCH), arm)
-	# when compiling for ARM we're cross compiling
-	export CROSS_COMPILE ?= arm-linux-androideabi-
-	CONFIG ?= arm
-else
-	# Compiling for the host
-	CONFIG ?= $(shell uname -m)
-endif
+export CROSS_COMPILE=/home/jedld/linaro/toolchain/bin/arm-eabi-
+
 
 # default cpu to select
 CPU ?= $(shell uname -m)
