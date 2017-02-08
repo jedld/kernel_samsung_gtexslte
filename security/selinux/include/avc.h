@@ -22,7 +22,7 @@
 #ifdef CONFIG_SECURITY_SELINUX_DEVELOP
 extern int selinux_enforcing;
 #else
-#define selinux_enforcing 1
+#define selinux_enforcing 0
 #endif
 
 /*
@@ -189,4 +189,3 @@ DECLARE_PER_CPU(struct avc_cache_stats, avc_cache_stats);
 #endif
 
 #endif /* _SELINUX_AVC_H_ */
-
