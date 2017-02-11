@@ -97,8 +97,11 @@ static cmd_t g_cmd_table[] =
 	CMD_ITEM(WIFI_EVENT_REPORT_FT),
 	CMD_ITEM(WIFI_CMD_UPDATE_FT_IE),
 	CMD_ITEM(WIFI_CMD_SET_CQM_RSSI),
+#ifdef CONFIG_MACH_SAMSUNG
 	CMD_ITEM(WIFI_CMD_SET_FCC_CHANNEL),
 	CMD_ITEM(WIFI_CMD_SET_TX_POWER_REDUCE),
+	CMD_ITEM(WIFI_CMD_SET_QOS),
+#endif
 	CMD_ITEM(WIFI_EVENT_WMM_REPORT),
 };
 char * get_cmd_name(int id)
@@ -315,10 +318,12 @@ int wlan_cmd_start_ap(unsigned char vif_id, unsigned char *beacon, unsigned shor
 	int ret;
 	unsigned short dataLen;
 	struct wlan_cmd_beacon_t *beacon_ptr;
+
 	dataLen = sizeof(struct wlan_cmd_beacon_t) + len ;
 	beacon_ptr = kmalloc( dataLen, GFP_KERNEL);
 	beacon_ptr->len = len;
 	memcpy(beacon_ptr->value, beacon, len);
+
 	ret = wlan_cmd_send_recv(vif_id, (unsigned char *)beacon_ptr, dataLen, WIFI_CMD_START_BEACON, CMD_WAIT_TIMEOUT);
 	return ret;
 }
@@ -457,17 +462,56 @@ int wlan_cmd_disable_whitelist(unsigned char vif_id, u8 *mac_addr)
 	return 0;
 }
 
-int wlan_cmd_send_common_data(unsigned char vif_id, u8 *data, int data_len)
+int wlan_cmd_send_common_data(wlan_vif_t *vif, u8 *data, int data_len)
 {
+	u8 max_clients = 0;
+	struct common_data_header *header;
+
 	if (data == NULL || data_len == 0) {
 		printke("%s data is NULL \n", __func__);
 		return -1;
 	}
 
-	wlan_cmd_send_recv(vif_id, data, data_len,
+	header = (struct common_data_header *)data;
+
+	printkd("COMMON DATA: msg type = 0x%x, msg len = %d\n", header->type, header->len);
+
+	if (header->type == COMMON_DATA_MSG_SOFTAP_MAX_DEV) {
+		max_clients = *(data + sizeof(*header));
+		/* make sure command WIFI_CMD_SET_DEV_OPEN has been set */
+		if (ITM_AP_MODE == vif->mode) {
+			vif->enable_softap_max_connections = true;
+			printkd("set max dev support = %d\n", max_clients);
+		} else {
+			vif->max_num_of_clients = max_clients;
+			return 0;
+		}
+	}
+
+	wlan_cmd_send_recv(vif->id, data, data_len,
 				WIFI_CMD_COMMON_DATA, CMD_WAIT_TIMEOUT);
 
 	return 0;
+}
+
+int wlan_cmd_set_softap_max_connections(wlan_vif_t *vif, u8 max)
+{
+	struct {
+		struct common_data_header hdr;
+		u8 max_dev;
+	}*msg;
+
+
+	msg = kmalloc(sizeof(*msg), GFP_KERNEL);
+	if (msg == NULL) {
+		return -1;
+	}
+
+	msg->hdr.type = COMMON_DATA_MSG_SOFTAP_MAX_DEV;
+	msg->hdr.len = 1;
+	msg->max_dev = max;
+
+	return wlan_cmd_send_common_data(vif, msg, sizeof(*msg));
 }
 
 int wlan_cmd_register_frame(unsigned char vif_id, struct  wlan_cmd_register_frame_t *data)
@@ -504,6 +548,7 @@ int wlan_cmd_set_p2p_ie(unsigned char vif_id, u8 type, const u8 *ie, u16 len)
 	return ret;
 }
 
+#ifdef CONFIG_MACH_SAMSUNG
 int wlan_cmd_set_tx_power_reduce(unsigned char vif_id, int value)
 {
 	int *ptr;
@@ -513,6 +558,17 @@ int wlan_cmd_set_tx_power_reduce(unsigned char vif_id, int value)
 	ret = wlan_cmd_send_recv(vif_id, ptr, 4, WIFI_CMD_SET_TX_POWER_REDUCE,
 				 CMD_WAIT_TIMEOUT);
 }
+
+int wlan_cmd_set_fcc_channel(unsigned char vif_id, int value)
+{
+	int *ptr;
+	int ret;
+	ptr = kzalloc(sizeof(int), GFP_KERNEL);
+	memcpy(ptr, &value, 4);
+	ret = wlan_cmd_send_recv(vif_id, ptr, 4, WIFI_CMD_SET_FCC_CHANNEL,
+				 CMD_WAIT_TIMEOUT);
+}
+#endif
 
 int wlan_cmd_set_ft_ie(unsigned char vif_id, const unsigned char *ies, unsigned short len)
 {
@@ -527,15 +583,6 @@ int wlan_cmd_set_ft_ie(unsigned char vif_id, const unsigned char *ies, unsigned 
 	return  wlan_cmd_send_recv(vif_id, ptr, dataLen, WIFI_CMD_SET_FT_IE, CMD_WAIT_TIMEOUT);
 }
 
-int wlan_cmd_set_fcc_channel(unsigned char vif_id, int value)
-{
-	int *ptr;
-	int ret;
-	ptr = kzalloc(sizeof(int), GFP_KERNEL);
-	memcpy(ptr, &value, 4);
-	ret = wlan_cmd_send_recv(vif_id, ptr, 4, WIFI_CMD_SET_FCC_CHANNEL,
-				 CMD_WAIT_TIMEOUT);
-}
 int wlan_cmd_set_tx_mgmt(unsigned char vif_id,
 			struct ieee80211_channel *channel,
 			u8 dont_wait_for_ack, unsigned int wait,
@@ -1166,15 +1213,15 @@ int wlan_cmd_npi_send_recv(unsigned char *s_buf,unsigned short s_len, unsigned c
 		printke("%s(), wait timeout\n", __func__);
 		goto ERR;
 	}
-	if(NULL != cmd->mem)
-	{
-		msg = (r_msg_hdr_t *)cmd->mem;
-	}
-	else
-	{
-		printke("rx mem is NULL at %s, %d", __func__,__LINE__);
-		goto ERR;
-	}
+                if(NULL != cmd->mem)
+                {
+                                msg = (r_msg_hdr_t *)cmd->mem;
+                }
+                else
+                {
+                                printke("rx mem is NULL at %s, %d", __func__,__LINE__);
+                                goto ERR;
+                }
 
 	if((SC2331_HOST_RSP == msg->type)  &&  (WIFI_CMD_NPI_MSG ==  msg->subtype))
 	{
@@ -1209,6 +1256,8 @@ int wlan_rx_rsp_process(const unsigned char vif_id, r_msg_hdr_t *msg)
 			hex_dump("[RECV_RSP]: ", strlen("[RECV_RSP]: "),
 				(unsigned char *)msg, msg->len + sizeof(r_msg_hdr_t));
 			wlan_rx_malformed_handler();
+			mutex_unlock(&cmd->mem_lock);
+			return OK;
 		}
 		memcpy(cmd->mem, (unsigned char *)msg,
 		       msg->len + sizeof(r_msg_hdr_t));
@@ -1222,6 +1271,36 @@ int wlan_rx_rsp_process(const unsigned char vif_id, r_msg_hdr_t *msg)
 
 	return OK;
 }
+
+#ifdef CONFIG_80211U_QOS_MAP
+int wlan_cmd_set_qos_map(const unsigned char vif_id, struct cfg80211_qos_map *qos_map)
+{
+	int len;
+	char *qos, *qmap;
+
+	qos = qmap = (char *)kmalloc(sizeof(struct cfg80211_qos_map), GFP_KERNEL);
+	if (qos == NULL) {
+		printke("malloc for qos error\n");
+		return -1;
+	}
+
+	*qmap++ = qos_map->num_des;
+
+	len = qos_map->num_des * sizeof(struct cfg80211_dscp_exception);
+	memcpy(qmap, qos_map->dscp_exception, len);
+
+	qmap += len;
+
+	len = sizeof(qos_map->up);
+
+	memcpy(qmap, qos_map->up, len);
+
+	qmap += len;
+
+	return wlan_cmd_send_recv(vif_id, (unsigned char *)qos, qmap - qos,
+				WIFI_CMD_SET_QOS_MAP, CMD_WAIT_TIMEOUT);
+}
+#endif
 
 int wlan_rx_event_process(const unsigned char vif_id, unsigned char event, unsigned char *pData, unsigned short len)
 {
@@ -1278,7 +1357,7 @@ int wlan_rx_event_process(const unsigned char vif_id, unsigned char event, unsig
 		case WIFI_EVENT_REPORT_FT:
 			cfg80211_report_ft(vif_id, pData, len);
 			break;
-        case WIFI_EVENT_WMM_REPORT:
+		case WIFI_EVENT_WMM_REPORT:
 			cfg80211_wmm_report(vif_id, pData, len);
 			break;
 		default:
@@ -1316,26 +1395,27 @@ int hex_dump(unsigned char  *name, unsigned short nLen, unsigned char *pData,  u
 int wlan_cmd_set_suspend_mode(unsigned char vif_id, bool enable)
 {
 #define SET_SUSPENDMODE_ID 6
-    struct suspend_cmd {
-        unsigned char cmd_id;
-        unsigned char data;
-    } *cmd;
+	struct suspend_cmd {
+		unsigned char cmd_id;
+		unsigned char data;
+	} *cmd;
 
-    cmd = kmalloc(sizeof(struct suspend_cmd), GFP_KERNEL);
-    if (IS_ERR(cmd)) {
-        printkd("%s malloc error\n", __func__);
-        return -1;
-    }    
+	cmd = kmalloc(sizeof(struct suspend_cmd), GFP_KERNEL);
+	if (IS_ERR(cmd)) {
+		printkd("%s malloc error\n", __func__);
+		return -1;
+	}
 
-    cmd->cmd_id = SET_SUSPENDMODE_ID;
+	cmd->cmd_id = SET_SUSPENDMODE_ID;
 
-    if (enable)
-        cmd->data = 1; 
-    else 
-        cmd->data = 0; 
+	if (enable)
+		cmd->data = 1;
+	else
+		cmd->data = 0;
 
-    printke("%s %d\n", __func__, enable);
+	printke("%s %d\n", __func__, enable);
 
-    return wlan_cmd_send_recv(vif_id, cmd, sizeof(struct suspend_cmd),
-            WIFI_CMD_MULTICAST_FILTER, CMD_WAIT_TIMEOUT);
+	return wlan_cmd_send_recv(vif_id, cmd, sizeof(struct suspend_cmd),
+			WIFI_CMD_MULTICAST_FILTER, CMD_WAIT_TIMEOUT);
 }
+

@@ -219,7 +219,7 @@ void tcp_session_updata(const unsigned char vif_id, unsigned char *frame, unsign
 
 msg_q_t *wlan_q_match_ack(wlan_vif_t *vif, unsigned char *frame, unsigned int len)
 {
-	unsigned int  tid,i;
+	unsigned int tid, i;
 	msg_q_t *msg_q = NULL;
 
 	if(vif->tcp_ack_suppress  == false)

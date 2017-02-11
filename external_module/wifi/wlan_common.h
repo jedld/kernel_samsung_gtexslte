@@ -60,12 +60,13 @@
 /* #define WLAN_LESS_WAKEUP_CP */
 #define WLAN_THREAD_SLEPP_POLICE
 #define WIFI_DRV_WAPI
+#define SOFTAP_DEFAULT_MAX_CONNECTIONS 8
 
 #define INCR_RING_BUFF_INDX(indx,max_num)    ((((indx) + 1) < (max_num)) ?  ((indx) + 1) : (0) )
 #define KERNEL_VERSION(a, b, c)              (((a) << 16) + ((b) << 8) + (c))
 #define LINUX_VERSION_CODE                   KERNEL_VERSION(3, 10, 0)
 #define SDIO_ALIGN_SIZE                      (1024)
-#define ALIGN_4BYTE(a)                       (  (((a)+3)&(~3))  ) 
+#define ALIGN_4BYTE(a)                       (  (((a)+3)&(~3))  )
 #define MAX_TX_BUFFER_ID                     (12)
 #define TEST_BIT(a, k)                       ((a>>k)&1)
 #define CLEAR_BIT(a, k)                      ({a = ( a&(~(1<<k)) );0;})
@@ -83,7 +84,7 @@
  * PKT_AGGR_NUM 12 = 38 / 3
  */
 #define OK                                   ( 0)
-#define ERROR                                (-1) 
+#define ERROR                                (-1)
 #define HW_TX_SIZE                           (13312)
 #define HW_RX_SIZE                           (12288)
 #define PKT_AGGR_NUM                         (12)
@@ -99,7 +100,7 @@
 #define HIDDEN_SSID                 "HIDDEN_SSID"
 #define SET_FCC_CHANNEL             "SET_FCC_CHANNEL"
 #define CMD_SETSUSPENDMODE          "SETSUSPENDMODE"
-#define CMD_SET_TX_POWER_REDUCE          "SET_TX_POWER_CALLING"
+#define CMD_SET_TX_POWER_REDUCE     "SET_TX_POWER_CALLING"
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
 #define KERNEL_DEBUG_LEVE     "\001" "0"
@@ -116,6 +117,7 @@
 #define MAC2STR(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
 
 #define MAX_RX_MALFORMED_NUM	(2)
+
 typedef struct
 {
 	unsigned char  chn[16];
@@ -151,7 +153,7 @@ typedef struct
 	int              exit;
 	struct semaphore sem;
 	int drv_status;
-	int cp2_status;	
+	int cp2_status;
 }drv_sync_t;
 
 typedef struct
@@ -228,14 +230,25 @@ typedef struct
 	int over_ds;
 }wlan_cfg80211_t;
 
+struct event_info{
+	struct list_head list;
+	int event_type;
+	unsigned short data_len;
+	unsigned char event_data[0];
+};
+
 /* Best not to use the work to send deauth cmd
  * FIXME in the future
  */
-struct deauth_info {
+struct event_work {
 	struct work_struct work;
-	/* 60 length is enough, maybe FIXME */
-	unsigned char mac[60];
-	unsigned short len;
+	spinlock_t lock;
+	struct list_head head;
+};
+
+struct remain_on_cookie{
+	u64	cookie;
+	int	cookie_used;
 };
 
 typedef struct
@@ -256,19 +269,22 @@ typedef struct
 	unsigned short                    id;
 	unsigned char                     mac[ETH_ALEN];
 	unsigned char                     beacon_loss;
-	int                               mode;	
+	int                               mode;
 	wlan_cfg80211_t                   cfg80211;
-	struct deauth_info	              deauth_info;
+	struct event_work                 ework;
 	txfifo_t                          txfifo;
 	msg_q_t                           msg_q[MSG_Q_MAX_ID];
-	qos_t                             qos;
+	qos_t							  qos;
 	bool                              tcp_ack_suppress;
 	wlan_tcp_session_t                tcp_session[MAX_TCP_SESSION];
-#ifdef CONFIG_WCN_EXTENSION	
+#ifdef CONFIG_WCN_EXTENSION
 	struct wlan_cmd_hidden_ssid       hssid;
 #endif
 	bool                              flow_ctrl_enable;
 	bool                              flow_ctrl_set;
+	struct remain_on_cookie           remain_on_channel_cookie;
+	u8								  enable_softap_max_connections;
+	u8                                max_num_of_clients;
 }wlan_vif_t;
 
 typedef struct
@@ -279,9 +295,10 @@ typedef struct
 	wlan_thread_t       wlan_trans;
 	hw_info_t           hw;
 	wlan_cmd_t          cmd;
-	drv_sync_t          sync;	
+	drv_sync_t          sync;
 	wlan_vif_t          netif[2];
 	rxfifo_t            rxfifo;
+	bool				is_marlin_15c;
 }wlan_info_t;
 
 
@@ -318,6 +335,7 @@ extern void mdbg_at_cmd_read(void);
 extern void mdbg_loopcheck_read(void);
 extern void mdbg_assert_read(void);
 extern void mdbg_assert_interface(void);
+// extern void fm_read(void);
 
 
 extern void mdbg_sdio_read(void);
@@ -329,7 +347,7 @@ extern char * get_cmd_name(int id);
 extern unsigned int g_dbg;
 extern wlan_info_t g_wlan;
 extern msg_q_t *wlan_q_match_ack(wlan_vif_t *vif, unsigned char *frame,
-			      unsigned int len);
+	      unsigned int len);
 extern int wlan_tcpack_tx(wlan_vif_t *vif, int *done);
 extern int wlan_tcpack_buf_malloc(wlan_vif_t *vif);
 extern int wlan_tcpack_buf_free(wlan_vif_t *vif);
@@ -338,5 +356,8 @@ extern int wlan_tx_buf_decode(unsigned char *buf, unsigned int max_len);
 extern void seq_point(unsigned char *frame, unsigned int len);
 extern void ack_timeout_point(unsigned char *frame, unsigned int len);
 extern void tcp_session_cfg(int cmd, int value);
+// extern bool sprd_get_marlin_version(void);
 extern void wlan_rx_malformed_handler(void);
+extern int wlan_cmd_send_common_data(wlan_vif_t *vif, u8 *data, int data_len);
+extern int wlan_cmd_set_softap_max_connections(wlan_vif_t *vif, u8 max);
 #endif

@@ -22,8 +22,9 @@
 #include "wlan_wapi.h"
 
 wlan_info_t g_wlan = { 0 };
-
 unsigned int g_dbg = 0xFFFFFFFF;
+
+#ifdef CONFIG_MACH_SAMSUNG
 static int g_wifi_chn = 9;
 
 wlan_ieee80211_regdomain wlan_regdom_11 = {
@@ -59,6 +60,7 @@ struct ieee80211_regdomain ieee80211_regdom_12_13 = {
 			  wlan_2GHZ_CH12_13,
 		      }
 };
+#endif
 
 static void wlan_tx_chn_flush(unsigned char  mode);
 
@@ -73,7 +75,7 @@ void core_down(void)
 
 void core_try_down(int retry)
 {
-	int sem_count;	
+	int sem_count;
 	wlan_thread_t *thread;
 	thread = &(g_wlan.wlan_core);
 	if(  thread->need_rx != thread->done_rx)
@@ -133,8 +135,8 @@ static void wlan_thread_exit(void)
 bool stop_net(unsigned char id )
 {
 	int i;
-	
-	if( (NULL == g_wlan.netif[id].ndev) || 
+
+	if( (NULL == g_wlan.netif[id].ndev) ||
 		  (false == g_wlan.netif[id].flow_ctrl_enable) )
 		return false;
 	for(i=0; i < 10; i++)
@@ -154,7 +156,7 @@ bool stop_net(unsigned char id )
 bool wake_net(unsigned char id)
 {
 	int i;
-	
+
 	if( (NULL == g_wlan.netif[id].ndev) ||
 		(false == g_wlan.netif[id].flow_ctrl_enable) ||
 		(1 == g_wlan.sync.exit) ||
@@ -177,12 +179,12 @@ bool wake_net(unsigned char id)
 static int hw_rx(const unsigned short chn, unsigned char *buf, unsigned int *len)
 {
 	int ret;
-	unsigned int read_len = 0, seq;	
+	unsigned int read_len = 0, seq;
 	static unsigned int cnt = 0, save_seq = 0;
 	if(NULL == buf)
 		return ERROR;
 	if(2 == g_wlan.sync.cp2_status)
-		return ERROR;	
+		return ERROR;
 	ret = sdio_dev_read(chn, buf, &read_len);
 	*len = read_len;
 	if(0 != ret)
@@ -190,12 +192,14 @@ static int hw_rx(const unsigned short chn, unsigned char *buf, unsigned int *len
 		printke("call sdio_dev_read err:%d\n", ret);
 		return HW_READ_ERROR;
 	}
+#ifdef CONFIG_MACH_SAMSUNG
 	memcpy((char *)(&seq), buf+4, 4);
 	if( seq != (save_seq+1) )
 		printke("sdio_read seq fail(%d,%d)\r\n", seq, save_seq);
 	save_seq = seq;
 	if( (8 == chn) || (9 == chn) )
 		g_wifi_chn = chn;
+#endif
 	printkp("[rx][%d]\n", chn );
 	wlan_rx_buf_decode(buf, read_len);
 	cnt++;
@@ -219,10 +223,12 @@ static int hw_tx(const unsigned short chn, unsigned char *buf, unsigned int len)
 	}
 	big_hdr->tx_cnt = g_wlan.hw.tx_cnt;
 	printkp("[tx][%d][%d]\n",big_hdr->tx_cnt, chn);
-	len = (len+1023)&0xFC00;
+
+	len = roundup(len, 512);
+
 	wlan_tx_buf_decode(buf, len);
 	if(2 == g_wlan.sync.cp2_status)
-		return ERROR;	
+		return ERROR;
 	ret = sdio_dev_write(chn, buf, len);
 	if(0 != ret)
 	{
@@ -381,7 +387,7 @@ static int wlan_xmit(struct sk_buff *skb, struct net_device *dev)
 	msg.hdr.type      = HOST_SC2331_PKT;
 	msg.hdr.subtype   = 0;
 	msg.hdr.len = skb->len;
-	
+
 	ret = msg_q_in(msg_q, &msg);
 	if(OK != ret){
 		printkd("L-PKT\n");
@@ -390,7 +396,7 @@ static int wlan_xmit(struct sk_buff *skb, struct net_device *dev)
 	}
 	vif->ndev->stats.tx_bytes += skb->len;
 	vif->ndev->stats.tx_packets++;
-	dev->trans_start = jiffies;	
+	dev->trans_start = jiffies;
 	g_wlan.wlan_core.need_tx++;
 	core_up();
 	return NETDEV_TX_OK;
@@ -414,7 +420,7 @@ static int wlan_rx_process(unsigned char *buf, unsigned int max_len)
 	static unsigned int skb = 0;
 	unsigned int     p = 0;
 	r_msg_hdr_t     *msg = NULL;
-	unsigned char    vif_id;	
+	unsigned char    vif_id;
 	wlan_vif_t      *vif;
 	unsigned char   *pData = NULL;
 	unsigned short   len;
@@ -429,12 +435,12 @@ static int wlan_rx_process(unsigned char *buf, unsigned int max_len)
 	max_len  = max_len - 8;
 	while(p < max_len)
 	{
-		
+
 		vif_id = msg->mode;
 		vif    = &(g_wlan.netif[vif_id]);
 		pData  = (unsigned char *)(msg+1);
 		len    = msg->len;
-		
+
 		if( (0x7F == msg->type) || (0xFF == msg->subtype) )     // type is 7 bit
 			break;
 		if(HOST_SC2331_PKT == msg->type)
@@ -608,7 +614,8 @@ int marlin_priv_cmd(struct net_device *ndev, struct ifreq *ifr)
 
 		ret = wlan_cmd_disable_whitelist(vif->id, q);
 #ifdef CONFIG_WCN_EXTENSION
-	} else if (strnicmp(command, HIDDEN_SSID, strlen(HIDDEN_SSID)) == 0) {
+	} else if (g_wlan.is_marlin_15c &&
+				(strnicmp(command, HIDDEN_SSID, strlen(HIDDEN_SSID)) == 0)) {
 		int skip = strlen(HIDDEN_SSID) + 1;
 		struct wlan_cmd_hidden_ssid *hssid = &(vif->hssid);
 
@@ -622,6 +629,7 @@ int marlin_priv_cmd(struct net_device *ndev, struct ifreq *ifr)
 		printke("len:%x\n", hssid->ssid_len);
 		printke("ssid:%s\n", hssid->ssid);
 #endif
+#ifdef CONFIG_MACH_SAMSUNG
 	} else if (strnicmp(command, SET_FCC_CHANNEL, strlen(SET_FCC_CHANNEL)) == 0) {
 			printkd("set fcc channel\n");
 			int skip = strlen(SET_FCC_CHANNEL) + 1;
@@ -636,6 +644,7 @@ int marlin_priv_cmd(struct net_device *ndev, struct ifreq *ifr)
 			wlan_cmd_set_tx_power_reduce(vif->id, 0);
 		else
 			wlan_cmd_set_tx_power_reduce(vif->id, -1);
+#endif
 	}else {
 		printkd("command not support\n");
 		ret = -1;
@@ -673,7 +682,7 @@ static void wlan_tx_timeout(struct net_device *dev)
 	wlan_vif_t   *vif;
 	printke("%s tx timeout\n", dev->name);
 	vif = ndev_to_vif(dev);
-	
+
 	if (!netif_carrier_ok(dev))
 		netif_carrier_on(dev);
 	dev->trans_start = jiffies;
@@ -710,7 +719,7 @@ static int wlan_send_common_data_to_ic(struct net_device *ndev, struct ifreq *re
 
 	vif = ndev_to_vif(ndev);
 
-	ret = wlan_cmd_send_common_data(vif->id, buf, priv_cmd.total_len);
+	ret = wlan_cmd_send_common_data(vif, buf, priv_cmd.total_len);
 	if (ret < 0) {
 		printkd("wlan_cmd_req_lte_concur failed with ret %d\n",	ret);
 	}
@@ -720,69 +729,71 @@ static int wlan_send_common_data_to_ic(struct net_device *ndev, struct ifreq *re
 
 static int wlan_set_suspend_mode(struct net_device *ndev, struct ifreq *ifr)
 {
-    wlan_vif_t *vif;
-    struct android_wifi_priv_cmd priv_cmd;
-    int ret = 0; 
-    char *command = NULL, *ptr = NULL;
+	wlan_vif_t *vif;
+	struct android_wifi_priv_cmd priv_cmd;
+	int ret = 0;
+	char *command = NULL, *ptr = NULL;
 
-    vif = ndev_to_vif(ndev);
+	vif = ndev_to_vif(ndev);
 
-    if (!ifr->ifr_data)
-        return -EINVAL;
+	if (!ifr->ifr_data)
+		return -EINVAL;
 
-    if (copy_from_user(&priv_cmd, ifr->ifr_data,
-                sizeof(struct android_wifi_priv_cmd)))
-        return -EFAULT;
+	if (copy_from_user(&priv_cmd, ifr->ifr_data,
+				sizeof(struct android_wifi_priv_cmd))) {
+		printke("Failed to copy from user space\n");
+		return -EFAULT;
+	}
 
-    command = kmalloc(priv_cmd.total_len + 1, GFP_KERNEL);
-    if (!command) {
-        printke("%s: %s Failed to allocate command!\n",
-                __func__, ndev->name);
-        return -ENOMEM;
-    }    
+	command = kmalloc(priv_cmd.total_len + 1, GFP_KERNEL);
+	if (!command) {
+		printke("%s: %s Failed to allocate! length = %d\n",
+				__func__, ndev->name, priv_cmd.total_len);
+		return -ENOMEM;
+	}
 
-    memset(command, 0x00, priv_cmd.total_len + 1);
-    if (copy_from_user(command, priv_cmd.buf, priv_cmd.total_len)) {
-        printke("%s: %s Failed to copy user buf data!\n",
-                __func__, ndev->name);
-        ret = -EFAULT;
-        goto exit;
-    }    
+	memset(command, 0x00, priv_cmd.total_len + 1);
+	if (copy_from_user(command, priv_cmd.buf, priv_cmd.total_len)) {
+		printke("%s: %s Failed to copy user buf data!\n",
+				__func__, ndev->name);
+		ret = -EFAULT;
+		goto exit;
+	}
 
-    ptr = strchr(command, ' ');
-    if (ptr == NULL) {
-        printke("Command format error!\n");
-        ret = -1;
-        goto exit;
-    }    
+	ptr = strchr(command, ' ');
+	if (ptr == NULL) {
+		printke("Command format error!\n");
+		ret = -1;
+		goto exit;
+	}
 
-    *ptr = 0; 
-    ptr++;
+	*ptr = 0;
+	ptr++;
 
-    if ((strcmp(command, CMD_SETSUSPENDMODE) == 0) &&
-            (strlen(ptr) == 1)) {
-        if (*ptr == '0') {
-            ret = wlan_cmd_set_suspend_mode(vif->id, false);
-        } else if (*ptr == '1'){
-            ret = wlan_cmd_set_suspend_mode(vif->id, true);
-        } else {
-            printke("Argument 2 not support\n");
-            ret = -1;
-        }    
-    } else {
-        printke("command [%s] not support\n", command);
-        ret = -1;
-    }    
+	if ((strcmp(command, CMD_SETSUSPENDMODE) == 0) &&
+			(strlen(ptr) == 1)) {
+		if (*ptr == '0') {
+			ret = wlan_cmd_set_suspend_mode(vif->id, false);
+		} else if (*ptr == '1'){
+			ret = wlan_cmd_set_suspend_mode(vif->id, true);
+		} else {
+			printke("Argument 2 not support\n");
+			ret = -1;
+		}
+	} else {
+		printke("command [%s] not support\n", command);
+		ret = -1;
+	}
 
 exit:
-    kfree(command);
-    return ret; 
+	kfree(command);
+	return ret;
 }
 
 
+#ifdef CONFIG_MACH_SAMSUNG
 int wlan_set_country_code(struct net_device *dev, struct ifreq *ifr)
 {
-    
     int ret = 0;
     char *buf = NULL, *ptr;
     struct android_wifi_priv_cmd priv_cmd;
@@ -807,13 +818,13 @@ int wlan_set_country_code(struct net_device *dev, struct ifreq *ifr)
         printke("malloc error!\n");
         return -ENOMEM;
     }
-	
+
 	memset(buf, 0x00, priv_cmd.total_len + 1);
     if (copy_from_user(buf, priv_cmd.buf, priv_cmd.total_len + 1)) {
         printke("copy failed from user space\n");
         kfree(buf);
         return -EFAULT;
-    } 
+    }
 
     ptr = strchr(buf, ' ');
     if (ptr == NULL) {
@@ -822,12 +833,12 @@ int wlan_set_country_code(struct net_device *dev, struct ifreq *ifr)
         return -1;
     }
 
-    *ptr = 0; 
+    *ptr = 0;
     ptr++;
 
     if ((strcmp(buf, "COUNTRY") == 0) &&
                     (strlen(ptr) == 2)) {
-        if (strcmp(ptr, "US") == 0 || strcmp(ptr, "CU") == 0) {
+        if (strcmp(ptr, "US") == 0 || strcmp(ptr, "CU") == 0 || strcmp(ptr, "TW") == 0) {
             rd_size = sizeof(wlan_ieee80211_regdomain) + sizeof(struct ieee80211_reg_rule);
             wlan_cmd_set_regdom(0, (unsigned char *)(&wlan_regdom_11), rd_size);
 			wiphy_apply_custom_regulatory(vif->wdev.wiphy, &ieee80211_regdom_11);
@@ -841,10 +852,11 @@ int wlan_set_country_code(struct net_device *dev, struct ifreq *ifr)
         kfree(buf);
         return -1;
     }
-    
+
     kfree(buf);
     return 0;
 }
+#endif
 
 static int wlan_ioctl(struct net_device *ndev, struct ifreq *req, int cmd)
 {
@@ -853,15 +865,22 @@ static int wlan_ioctl(struct net_device *ndev, struct ifreq *req, int cmd)
 
 	switch (cmd) {
 	case SIOCDEVPRIVATE + 1:
+#ifdef CONFIG_MACH_SAMSUNG
 	case SIOCDEVPRIVATE + 3:
 	case SIOCDEVPRIVATE + 6:
+#endif
 		return marlin_priv_cmd(ndev, req);
+		break;
 	case SIOCDEVPRIVATE + 2:
 		return wlan_send_common_data_to_ic(ndev, req);
-	case SIOCDEVPRIVATE + 4: 
-        return wlan_set_suspend_mode(ndev, req);
+		break;
+	case SIOCDEVPRIVATE + 4:
+		return wlan_set_suspend_mode(ndev, req);
+		break;
+#ifdef CONFIG_MACH_SAMSUNG
 	case SIOCDEVPRIVATE + 5:
         return wlan_set_country_code(ndev, req);
+#endif
 	default:
 		printke("ioctl cmd %d is not supported\n", cmd);
 		return -ENOTSUPP;
@@ -869,7 +888,7 @@ static int wlan_ioctl(struct net_device *ndev, struct ifreq *req, int cmd)
 	return 0;
 }
 
-struct net_device_ops wlan_ops = 
+struct net_device_ops wlan_ops =
 {
 	.ndo_open                 = wlan_open,
 	.ndo_stop                 = wlan_close,
@@ -932,7 +951,7 @@ int wlan_rx(rxfifo_t *rx_fifo, int cnt)
 	num = rx_fifo_used(rx_fifo);
 	if(num > cnt)
 		num = cnt;
-	for(i=0; i < num ; i++)	
+	for(i=0; i < num ; i++)
 	{
 		ret = rx_fifo_out(rx_fifo, wlan_rx_process);
 		if(ERROR == ret)
@@ -961,7 +980,7 @@ int wlan_tx(txfifo_t *tx_fifo, msg_q_t *msg_q, int cnt)
 			break;
 		}
 		trans_up();
-		if( HOST_SC2331_CMD == msg->hdr.type) 
+		if( HOST_SC2331_CMD == msg->hdr.type)
 		{
 			if((msg->slice[0].len > 0) &&(NULL != msg->slice[0].data))
 				kfree(msg->slice[0].data);
@@ -973,7 +992,7 @@ int wlan_tx(txfifo_t *tx_fifo, msg_q_t *msg_q, int cnt)
 		}
 		else
 		{}
-		
+
 		memset((unsigned char *)msg,  0,  sizeof(tx_msg_t));
 		msg_free(msg_q, msg);
 		tx_cnt++;
@@ -1006,12 +1025,12 @@ static int wlan_core_thread(void *data)
 {
 	int            i,j,ret,retry,vif_id, done, sem_count,q_index,need_tx,tmp,sleep_flag,ack_retry;
 	unsigned long  timeout;
-	wlan_vif_t    *vif;	
+	wlan_vif_t    *vif;
 	rxfifo_t      *rx_fifo;
 	txfifo_t      *tx_fifo;
 	wlan_thread_t *thread;
 	msg_q_t       *msg_q;
-	
+
 	thread = &(g_wlan.wlan_core);
 	thread->null_run     = 0;
 	thread->max_null_run = 200;
@@ -1042,7 +1061,6 @@ static int wlan_core_thread(void *data)
 		{
 			vif     = &(g_wlan.netif[vif_id]);
 			tx_fifo = &(vif->txfifo);
-			
 			msg_q = &(vif->msg_q[MSG_Q_ID_4]);
 			if( (msg_num(msg_q) > 0) && ( ret = wlan_tx(tx_fifo, msg_q, msg_num(msg_q)) > 0) )
 				thread->done_tx += ret;
@@ -1051,82 +1069,72 @@ static int wlan_core_thread(void *data)
 				ack_retry = 1;
 			done            += tmp;
 			thread->done_tx += tmp;
-			
+
 			qos_sched(&(vif->qos), &msg_q, &need_tx);
-			
-				for(i=0,j=0; i<need_tx; i++)
+			for(i=0,j=0; i<need_tx; i++)
+			{
+				ret = wlan_tx(tx_fifo, msg_q, 1);
+				if (TX_FIFO_FULL == ret)
 				{
-					ret = wlan_tx(tx_fifo, msg_q, 1);
-					if (TX_FIFO_FULL == ret) 
+					if (0 == sleep_flag)
 					{
-						if (0 == sleep_flag) 
-						{
-							timeout = jiffies + msecs_to_jiffies(WLAN_CORE_SLEEP_TIME);
-							sleep_flag = 1;
-						} 
-						else 
-						{
-							if (time_after(jiffies, timeout)) 
-							{
-								printke("%s [TIMEOUT][%lu] jiffies:%lu\n",__func__, timeout, jiffies);
-								msleep(300);
-								sleep_flag = 0;
-							}
-						}
-						retry++;
-						continue;
-					}
-					else if (TX_FIFO_EMPTY == ret) 
-					{
-						/* no problem as need_tx, excpt get_event erro */
-						ASSERT();
-						msleep(10);
-						retry++;
-						continue;
+						timeout = jiffies + msecs_to_jiffies(WLAN_CORE_SLEEP_TIME);
+						sleep_flag = 1;
 					}
 					else
+					{
+						if (time_after(jiffies, timeout))
+						{
+							printke("%s [TIMEOUT][%lu] jiffies:%lu\n",__func__, timeout, jiffies);
+							msleep(300);
+							sleep_flag = 0;
+						}
+					}
+					retry++;
+					continue;
+				}
+				else if (TX_FIFO_EMPTY == ret)
+				{
+					/* no problem as need_tx, excpt get_event erro */
+					ASSERT();
+					msleep(10);
+					retry++;
+					continue;
+				}
+				else
 				{
 					q_index = vif->qos.index;
-					vif->qos.going[q_index]--;
+					if (vif->qos.enable)
+						vif->qos.going[q_index]--;
 					vif->qos.count[q_index][1]++;
 					//eth_printk("get(%d,%d,%d)", q_index, vif->qos.count[q_index][0], vif->qos.count[q_index][1]);
 				}
-					if (sleep_flag)
-						sleep_flag = 0;
-					done += ret;
-					thread->done_tx += ret;
-					j++;
-					if(j >= 6)
-					{
-						ret   = wlan_rx(rx_fifo, 1);
-						done  = done + ret;
-						thread->done_rx += ret;
-						j=0;
-					}
-				}
-			}
-			if( true == vif->flow_ctrl_set )
-			{
-				for(i=0; i<MSG_Q_MAX_ID; i++)
+				if (sleep_flag)
+					sleep_flag = 0;
+				done += ret;
+				thread->done_tx += ret;
+				j++;
+				if(j >= 6)
 				{
-					if (msg_num(&(vif->msg_q[i])) > (vif->msg_q[i].num * 2 / 10))
-						break;
+					ret   = wlan_rx(rx_fifo, 1);
+					done  = done + ret;
+					thread->done_rx += ret;
+					j=0;
 				}
-
-				if (i == MSG_Q_MAX_ID)
-					wake_net(vif->id);
 			}
+		}
+
 		if(done > 0)
 			thread->null_run= 0;
 		else
 			thread->null_run++;
 		if(ack_retry != 1)
 			core_try_down(retry);
-		
+
 		if (g_wlan.wlan_core.exit_flag)
 			break;
 	}while(!kthread_should_stop());
-	
+
 	printke("%s exit!\n", __func__);
 	atomic_set(&(g_wlan.wlan_core.exit_status), 1);
 	return 0;
@@ -1134,14 +1142,15 @@ static int wlan_core_thread(void *data)
 
 static int check_valid_chn(int flag, unsigned short status, sdio_chn_t *chn_info)
 {
-	int i,chn = -1;
+	int i,index = -1;
 
 	if(1 == flag)
-		status = ( status & (chn_info->bit_map) );	
+		status = ( status & (chn_info->bit_map) );
 	else
 		status = ( (status & chn_info->bit_map) ^ (chn_info->bit_map) );
 	if(0 == status)
 		return -1;
+#ifdef CONFIG_MACH_SAMSUNG
 	if(1 == flag)
 	{
 		if ( status & 0x300 )
@@ -1150,53 +1159,56 @@ static int check_valid_chn(int flag, unsigned short status, sdio_chn_t *chn_info
 			{
 			case 0x300:
 				if(8 == g_wifi_chn)
-					chn = 9;
+					index = 9;
 				else
-					chn = 8;
+					index = 8;
 				break;
 			case 0x200:
-				chn = 9;
-				break;				
+				index = 9;
+				break;
 			case 0x100:
-				chn = 8;
+				index = 8;
 				break;
 			default:
 				break;
 			}
-			if(chn == g_wifi_chn)
+			if(index == g_wifi_chn)
 				printke(" wifi_chn order err\r\n");
-			return chn;
+			return index;
 		}
 		for (i = 2; i < chn_info->num; i++)
 		{
-			if (status & (0x1 << chn_info->chn[i])) 
+			if (status & (0x1 << chn_info->chn[i]))
 			{
-				chn = chn_info->chn[i];
-				return chn;
+				index = chn_info->chn[i];
+				return index;
 			}
 		}
 	}
 	else
 	{
-	for(i=0; i < chn_info->num; i++)
-	{
-		if( status & (0x1 << chn_info->chn[i]) )
+#endif
+		for(i=0; i < chn_info->num; i++)
 		{
-				chn = chn_info->chn[i];
-			break;
+			if( status & (0x1 << chn_info->chn[i]) )
+			{
+				index = chn_info->chn[i];
+				break;
 			}
 		}
+#ifdef CONFIG_MACH_SAMSUNG
 	}
-	return chn;
+#endif
+	return index;
 }
 
-void sdio_info_dump(void )
+static void sdio_info_dump(void )
 {
 	int ret;
 	unsigned short chn = 0;
-	ret = sdio_chn_status(0xFFFF, &chn);
+	ret = sdio_chn_status(0xFF, &chn);
 	if (0 == ret)
-		printke("[sdio_reg:0x%x][gpio:%d]\r\n", chn, gpio_get_value(SDIO_RX_GPIO) );
+		printke("[sdio_chn_info][0x%x][gpio][%d]\n", chn, gpio_get_value(SDIO_RX_GPIO) );
 	else
 		printke("sdio_chn_status error:%d\n", ret);
 	return;
@@ -1282,16 +1294,16 @@ static int wlan_trans_thread(void *data)
 	int i,vif_id,ret,done, retry,sem_count,send_pkt, index, wake_flag, gpio_status;
 	rxfifo_t       *rx_fifo;
 	txfifo_t       *tx_fifo;
-	wlan_vif_t     *vif;	
+	wlan_vif_t     *vif;
 	sdio_chn_t     *tx_chn;
 	sdio_chn_t     *rx_chn;
 	unsigned short  status;
 	wlan_thread_t  *thread;
 	u32 rx_gpio;
-	
+
 	thread = &(g_wlan.wlan_trans);
 	sdiodev_readchn_init(8, (void *)wlan_rx_chn_isr, 1);
-	sdiodev_readchn_init(9, (void *)wlan_rx_chn_isr, 1);	
+	sdiodev_readchn_init(9, (void *)wlan_rx_chn_isr, 1);
 	rx_chn       = &(g_wlan.hw.sdio_rx_chn);
 	tx_chn       = &(g_wlan.hw.sdio_tx_chn);
 	rx_fifo      = &(g_wlan.rxfifo);
@@ -1356,12 +1368,12 @@ RX:
 		index = check_valid_chn(1, status, rx_chn);
 		if(index < 0)
 		{
-			
+
 RX_SLEEP:
 			if(false == rx_chn->timeout_flag)
 			{
 				rx_chn->timeout_flag = true;
-				rx_chn->timeout      = jiffies + msecs_to_jiffies(rx_chn->timeout_time); 
+				rx_chn->timeout      = jiffies + msecs_to_jiffies(rx_chn->timeout_time);
 			}
 			else
 			{
@@ -1372,21 +1384,26 @@ RX_SLEEP:
 					msleep(300);
 					rx_chn->timeout_flag = false;
 				}
-			}	
+			}
 			goto TX;
 		}
 		if(true == rx_chn->timeout_flag)
 		{
 			rx_chn->timeout_flag = false;
 		}
-		if(14 == index)
+		if(10 == index)
 		{
-			mdbg_sdio_read();
+			// fm_read();
 			goto TX;
 		}
 		if(11 == index)
 		{
 			mdbg_at_cmd_read();
+			goto TX;
+		}
+		if(14 == index)
+		{
+			mdbg_sdio_read();
 			goto TX;
 		}
 		if(15 == index)
@@ -1405,7 +1422,7 @@ RX_SLEEP:
 		g_wlan.wlan_core.need_rx++;
 		core_up();
 
-TX:	
+TX:
 		for(vif_id = NETIF_0_ID; vif_id < WLAN_MAX_ID; vif_id++ )
 		{
 			vif     = &(g_wlan.netif[vif_id]);
@@ -1445,7 +1462,7 @@ TX_SLEEP:
 				if(false == tx_chn->timeout_flag)
 				{
 					tx_chn->timeout_flag = true;
-					tx_chn->timeout      = jiffies + msecs_to_jiffies(tx_chn->timeout_time); 
+					tx_chn->timeout      = jiffies + msecs_to_jiffies(tx_chn->timeout_time);
 				} else {
 					if (time_after
 					    (jiffies, tx_chn->timeout)) {
@@ -1453,7 +1470,7 @@ TX_SLEEP:
 						sdio_info_dump();
 						wlan_tx_chn_flush(0);
 						tx_chn->chn_timeout_cnt++;
-						if(tx_chn->chn_timeout_cnt > 20)
+						if(tx_chn->chn_timeout_cnt > 6)
 						{
 							printke("[SDIO_TX_CHN][ERROR][block more than 20 times][need reset CP2]\n");
 							mdbg_assert_interface();
@@ -1462,7 +1479,7 @@ TX_SLEEP:
 						msleep(300);
 						tx_chn->timeout_flag = false;
 					}
-				}	
+				}
 				retry++;
 				continue;
 			}
@@ -1480,16 +1497,28 @@ TX_SLEEP:
 				}
 				continue;
 			}
+			if( true == vif->flow_ctrl_set )
+			{
+				for(i=0; i<MSG_Q_MAX_ID; i++)
+				{
+					if (msg_num(&(vif->msg_q[i])) > (vif->msg_q[i].num * 2 / 10))
+						break;
+				}
+
+				printkd("leon %s#%d\n", __func__, __LINE__);
+				if (i == MSG_Q_MAX_ID)
+					wake_net(vif->id);
+			}
 			done = done + send_pkt;
 			core_try_up();
 		}
-		
+
 		gpio_status = gpio_get_value(rx_gpio);
 		if(gpio_status)
 		{
 			if(g_wlan.wlan_trans.sem.count - done <= 1)
 			{
-				done = (g_wlan.wlan_trans.sem.count > 0)?(g_wlan.wlan_trans.sem.count-1):(0); 
+				done = (g_wlan.wlan_trans.sem.count > 0)?(g_wlan.wlan_trans.sem.count-1):(0);
 			}
 		}
 		else
@@ -1531,13 +1560,14 @@ static int wlan_tx_buf_alloc(wlan_vif_t *vif)
 {
 	txfifo_conf_t  fifo_conf  = {0};
 	int  ret,q_id;
-	
+
 	msg_q_alloc(&(vif->msg_q[MSG_Q_ID_0]), sizeof(tx_msg_t), 256);
 	msg_q_alloc(&(vif->msg_q[MSG_Q_ID_1]), sizeof(tx_msg_t), 150);
 	msg_q_alloc(&(vif->msg_q[MSG_Q_ID_2]), sizeof(tx_msg_t), 150);
 	msg_q_alloc(&(vif->msg_q[MSG_Q_ID_3]), sizeof(tx_msg_t), 150);
 	msg_q_alloc(&(vif->msg_q[MSG_Q_ID_4]), sizeof(tx_msg_t), 5);
 	vif->qos.msg_q  = &(vif->msg_q[0]);
+
 	fifo_conf.cp2_txRam   = HW_TX_SIZE - sizeof(tx_big_hdr_t);
 	fifo_conf.max_msg_num = PKT_AGGR_NUM;
 	fifo_conf.size        = 1024*256;
@@ -1551,7 +1581,7 @@ static int wlan_tx_msg_q_free(wlan_vif_t *vif)
 {
 	int         q_id, num,i;
 	msg_q_t    *msg_q;
-	tx_msg_t   *msg;	
+	tx_msg_t   *msg;
 	for(q_id=0; q_id<MSG_Q_MAX_ID; q_id++)
 	{
 		msg_q = &(vif->msg_q[q_id]);
@@ -1589,24 +1619,31 @@ static int wlan_hw_init(hw_info_t *hw)
 {
 	struct device_node *np;
 	memset(hw, 0, sizeof(hw_info_t) );
-	
+
 	hw->sdio_tx_chn.num          = 3;
 	hw->sdio_tx_chn.chn[0]       = 0;
 	hw->sdio_tx_chn.chn[1]       = 1;
 	hw->sdio_tx_chn.chn[2]       = 2;
 	hw->sdio_tx_chn.bit_map      = 0x0007;
-	hw->sdio_tx_chn.timeout_time = 600;
+	hw->sdio_tx_chn.timeout_time = 2000;
 	hw->sdio_tx_chn.timeout_flag = false;
 
-	hw->sdio_rx_chn.num          = 6;
+
 	hw->sdio_rx_chn.chn[0]       = 8;
 	hw->sdio_rx_chn.chn[1]       = 9;
 	hw->sdio_rx_chn.chn[2]       = 14;
 	hw->sdio_rx_chn.chn[3]       = 11;
 	hw->sdio_rx_chn.chn[4]       = 15;
 	hw->sdio_rx_chn.chn[5]       = 13;
+#ifdef CONFIG_MACH_SAMSUNG
+	hw->sdio_rx_chn.num          = 6;
 	hw->sdio_rx_chn.bit_map      = 0xeb00;
-	hw->sdio_rx_chn.gpio_high    = false;	
+#else
+	hw->sdio_rx_chn.num          = 7;
+	hw->sdio_rx_chn.chn[6]       = 10;
+	hw->sdio_rx_chn.bit_map      = 0xef00;
+#endif
+	hw->sdio_rx_chn.gpio_high    = false;
 	hw->sdio_rx_chn.timeout_time = 600;
 	hw->sdio_rx_chn.timeout_flag = false;
 
@@ -1619,7 +1656,7 @@ static int wlan_hw_init(hw_info_t *hw)
 
 	printke("[SDIO_TX_CHN][0x%x][0x%x]\n", hw->sdio_tx_chn.bit_map, HW_TX_SIZE);
 	printke("[SDIO_RX_CHN][0x%x][0x%x]\n", hw->sdio_rx_chn.bit_map, HW_RX_SIZE);
-	
+
 	hw->wakeup = 0;
 	spin_lock_init(&(hw->sdio_rx_chn.lock));
 	wake_lock_init(&g_wlan.hw.wlan_lock, WAKE_LOCK_SUSPEND, "wlan_sc2331_lock");
@@ -1644,7 +1681,7 @@ static int wlan_inetaddr_event(struct notifier_block *this,
 	{
 		printkd("dev id not equal to 0 or 1!\n");
 		goto done;
-	}	
+	}
 
 	if (dev == NULL)
 		goto done;
@@ -1685,7 +1722,7 @@ static ssize_t wlan_proc_write(struct file *file, const char __user *buffer, siz
 	if (copy_from_user(kbuf, buffer, ( (count <= 32)?(count):(32) ) )  )
 		return -EFAULT;
 	sscanf(kbuf, "%d %d %d\n", &id, &cmd, &value);
-	
+
 	printke("[%s][%d][%d][%d]\n", __func__,id,cmd, value);
 	switch (id)
 	{
@@ -1694,7 +1731,7 @@ static ssize_t wlan_proc_write(struct file *file, const char __user *buffer, siz
 		break;
 	case 2:
 		CLEAR_BIT(g_dbg, cmd);
-		break;	
+		break;
 	case 3:
 		if( (0 != cmd) && (1 != cmd) )
 			break;
@@ -1730,7 +1767,7 @@ static int wlan_proc_ioctl(struct file *filp, unsigned int cmd, unsigned long ar
 		printke("[%s][err]\n", __func__);
 		return -EFAULT;
 	}
-	switch (cmd) 
+	switch (cmd)
 	{
 	case 0x10:
 		g_wlan.sync.cp2_status = 2;
@@ -1757,7 +1794,7 @@ static int wlan_proc_ioctl(struct file *filp, unsigned int cmd, unsigned long ar
 	return 0;
 }
 
-static const struct file_operations wlan_proc_fops = 
+static const struct file_operations wlan_proc_fops =
 {
 	.owner   = THIS_MODULE,
 	.write   = wlan_proc_write,
@@ -1766,7 +1803,7 @@ static const struct file_operations wlan_proc_fops =
 	.release = wlan_proc_release,
 };
 
-static const struct file_operations lte_concur_proc_fops = 
+static const struct file_operations lte_concur_proc_fops =
 {
 	.owner		= THIS_MODULE,
 	.unlocked_ioctl  = lte_concur_proc_ioctl,
@@ -1778,7 +1815,7 @@ int wlan_module_init(struct device *dev)
 {
 	int ret;
 
-	printke("[%s] [ version:0x28 ] [ time(%s %s) ][(20160107)(for tpt & fix BUG_ON)]\n", __func__,
+	printke("[%s] [ version:0x28 ] [ time(%s %s) ][wlan_qos support]\n", __func__,
 		__DATE__,__TIME__);
 	if(NULL == dev)
 		return -EPERM;
@@ -1796,6 +1833,15 @@ int wlan_module_init(struct device *dev)
 	g_wlan.sync.drv_status = 0;
 	//marlin_pa_enable(true);
 	memset((unsigned char *)(&g_wlan), 0, sizeof(wlan_info_t));
+
+	// if (sprd_get_marlin_version()) {
+		g_wlan.is_marlin_15c = true;
+		printke("Marlin Version is 15C\n");
+	// } else {
+	// 	g_wlan.is_marlin_15c = false;
+	// 	printke("Marlin Version is 15A\n");
+	// }
+
 	g_wlan.dev = dev;
 	g_wlan.netif[NETIF_0_ID].id= NETIF_0_ID;
 	g_wlan.netif[NETIF_1_ID].id= NETIF_1_ID;
@@ -1806,7 +1852,13 @@ int wlan_module_init(struct device *dev)
 
 	wlan_tx_buf_alloc(&(g_wlan.netif[NETIF_0_ID]));
 	wlan_tx_buf_alloc(&(g_wlan.netif[NETIF_1_ID]));
-	
+#ifdef CONFIG_MACH_SAMSUNG
+	qos_enable(&g_wlan.netif[NETIF_0_ID].qos, 0);
+	qos_enable(&g_wlan.netif[NETIF_1_ID].qos, 0);
+#else
+	qos_enable(&g_wlan.netif[NETIF_0_ID].qos, 1);
+	qos_enable(&g_wlan.netif[NETIF_1_ID].qos, 0);
+#endif
 	g_wlan.netif[NETIF_0_ID].tcp_ack_suppress = true;
 	g_wlan.netif[NETIF_1_ID].tcp_ack_suppress = true;
 	g_wlan.netif[NETIF_0_ID].flow_ctrl_enable      = true;
@@ -1827,7 +1879,7 @@ int wlan_module_init(struct device *dev)
 
 	g_wlan.wlan_trans.exit_flag = 0;
 	g_wlan.wlan_core.exit_flag = 0;
-	
+
 	ret = wlan_wiphy_new(&(g_wlan));
 	if(OK != ret)
 		return -EPERM;
@@ -1850,28 +1902,28 @@ int wlan_module_init(struct device *dev)
 		wake_up_process(g_wlan.wlan_core.task);
 	down(&(g_wlan.sync.sem));
 	wlan_nl_init();
-	
+
 	g_wlan.hw.early_suspend.suspend  = wlan_early_suspend;
 	g_wlan.hw.early_suspend.resume   = wlan_late_resume;
-	g_wlan.hw.early_suspend.level    = EARLY_SUSPEND_LEVEL_BLANK_SCREEN - 1;	
+	g_wlan.hw.early_suspend.level    = EARLY_SUSPEND_LEVEL_BLANK_SCREEN - 1;
 	register_early_suspend(&g_wlan.hw.early_suspend);
-	
+
 	ret = register_inetaddr_notifier(&itm_inetaddr_cb);
 	if (ret) {
 		printke("Couldn't register inetaddr notifier \n");
 	}
-	if (!proc_create("wlan", 0666, NULL, &wlan_proc_fops)) 
+	if (!proc_create("wlan", 0666, NULL, &wlan_proc_fops))
 	{
 		printke("Couldn't create the /proc/wlan \n");
 	}
 	if (!proc_create("lte_concur", 0666, NULL, &lte_concur_proc_fops))
 	{
 		printke("Couldn't create the /proc/lte_concur \n");
-	}	
+	}
 	g_dbg = 0x0;
 	SET_BIT(g_dbg,1);
 	g_wlan.sync.drv_status = 1;
-	g_wlan.sync.cp2_status = 1;	
+	g_wlan.sync.cp2_status = 1;
 	printke("%s ok!\n", __func__);
 	return OK;
 }
@@ -1905,7 +1957,7 @@ int wlan_module_exit(struct device *dev)
 	wlan_tx_msg_q_free(&(g_wlan.netif[NETIF_0_ID]));
 	wlan_tx_msg_q_free(&(g_wlan.netif[NETIF_1_ID]));
 	wlan_tcpack_buf_free(&(g_wlan.netif[NETIF_0_ID]));
-	wlan_tcpack_buf_free(&(g_wlan.netif[NETIF_1_ID]));	
+	wlan_tcpack_buf_free(&(g_wlan.netif[NETIF_1_ID]));
 	wlan_rx_buf_free();
 	wlan_nl_deinit();
 	remove_proc_entry("wlan", NULL);
@@ -1920,12 +1972,6 @@ EXPORT_SYMBOL_GPL(wlan_module_exit);
 
 static int  sprd_wlan_probe(struct platform_device *pdev)
 {
-#ifdef CONFIG_WCN_EXTENSION
-	printke("CONFIG_WCN_EXTENSION is defined!\n");
-#else
-	printke("CONFIG_WCN_EXTENSION is not defined!\n");
-#endif
-	
 	return wlan_module_init(&(pdev->dev));
 }
 
@@ -1940,7 +1986,7 @@ static struct platform_driver  sprd_wlan_driver =
 {
 	.probe =   sprd_wlan_probe,
 	.remove =  sprd_wlan_remove,
-	.driver = 
+	.driver =
 	{
 		.owner = THIS_MODULE,
 		.name = DEVICE_NAME,
@@ -1967,5 +2013,3 @@ MODULE_DESCRIPTION("SPRD sc2331 Wireless Network Adapter");
 MODULE_AUTHOR("jinglong.chen");
 MODULE_LICENSE("GPL");
 MODULE_VERSION("1.0");
-
-

@@ -56,6 +56,9 @@
 
 #define wlan_2GHZ_CH01_11	REG_RULE(2412-10, 2462+10, 20, 0, 20, 0)
 #define wlan_2GHZ_CH12_13	REG_RULE(2467-10, 2472+10, 20, 0, 20, 0)
+#define WLAN_EID_VENDOR_SPECIFIC 221
+#define WLAN_EID_EXT_CAPAB 127
+#define HS20_IE_VENDOR_TYPE 0x506f9a10
 
 enum wlan_mode 
 {
@@ -112,6 +115,7 @@ typedef struct
 	unsigned char  ssid[33];
 	unsigned char  bssid[6];
 	unsigned char  msa[1024];
+	int is_probe_resp;
 }buf_scan_frame_t;
 
 typedef struct
@@ -127,17 +131,16 @@ typedef struct
 }wlan_ieee80211_regdomain;
 
 struct cfg80211_internal_bss {
-	struct list_head list;
-	struct list_head hidden_list;
-	struct rb_node rbn;
-	unsigned long ts;
-	unsigned long refcount;
-	atomic_t hold;
+                struct list_head list;
+                struct list_head hidden_list;
+                struct rb_node rbn;
+                unsigned long ts;
+                unsigned long refcount;
+                atomic_t hold;
 
-	/* must be last because of priv member */
-	struct cfg80211_bss pub;
+                /* must be last because of priv member */
+                struct cfg80211_bss pub;
 };
-
 extern void cfg80211_report_connect_result(unsigned char vif_id, unsigned char *pData, int len);
 extern void cfg80211_report_disconnect_done(unsigned char vif_id, unsigned char *pData, int len);
 extern void cfg80211_report_scan_done(unsigned char vif_id, unsigned char *pData, int len, bool aborted);

@@ -158,7 +158,7 @@ restart:
 	{	
 		hdr = (t_msg_hdr_t *)(readTo);
 		if((unsigned char *)hdr >= readMax )
-			break;
+			break;		
 		len = len + TX_MSG_UNIT_LEN(hdr);
 		if( len >= fifo->cp2_txRam )
 			break;
@@ -283,10 +283,12 @@ int rx_fifo_in(const unsigned char chn, rxfifo_t *fifo, P_FUNC_2 pfunc )
 		return ERROR;
 	ret = pfunc(chn, fifo->mem[fifo->WT], &rx_len);
 	if(OK == ret) {
+#ifdef CONFIG_MACH_SAMSUNG
 		if (rx_len > fifo->block_size) {
 			printke("[%s] rx_len=%d fifo->block_size=%d\n",__func__, rx_len, fifo->block_size);
 			BUG_ON(1);
 		}
+#endif
 		fifo->WT  = INCR_RING_BUFF_INDX(fifo->WT, fifo->block_num);
 	}
 	return ret;

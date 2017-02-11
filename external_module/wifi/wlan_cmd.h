@@ -7,6 +7,15 @@
 
 #define ITM_PMKID_LEN     16
 
+enum COMMON_DATA_MSG_SUBTYPE
+{
+	COMMON_DATA_MSG_LTE_3WIRE = 1,
+	COMMON_DATA_MSG_GO_NOA,
+	COMMON_DATA_MSG_GO_OPPPS,
+	COMMON_DATA_MSG_SOFTAP_MAX_DEV,
+	COMMON_DATA_MSG_INTERMITTENT_SCAN_FLAG,
+};
+
 enum ITM_HOST_TROUT3_CMD_TYPE
 {
 	HOST_SC2331_CMD = 0,
@@ -69,9 +78,11 @@ enum ITM_HOST_TROUT3_CMD_LIST
 	WIFI_CMD_DEL_WHITELIST,
 	WIFI_CMD_ENABLE_WHITELIST,
 	WIFI_CMD_DISABLE_WHITELIST,
+#ifdef CONFIG_MACH_SAMSUNG
 	WIFI_CMD_SET_FCC_CHANNEL,
 	WIFI_CMD_SET_QOS,			//reserved for Qos
 	WIFI_CMD_SET_TX_POWER_REDUCE,
+#endif
 	WIFI_CMD_MAX,
 	
 	
@@ -102,6 +113,11 @@ enum wlan_cmd_disconnect_reason
 {
 	AP_LEAVING = 0xc1,
 	AP_DEAUTH = 0xc4,
+};
+
+struct common_data_header {
+	u16 type;
+	u16 len;
 };
 
 #ifdef CONFIG_MACH_SAMSUNG
@@ -416,10 +432,11 @@ extern int wlan_cmd_deinit(void );
 extern int wlan_cmd_set_ft_ie(unsigned char vif_id, const unsigned char *ies, unsigned short len);
 extern int wlan_cmd_update_ft_ies( unsigned char vif_id, struct cfg80211_update_ft_ies_params *ft_ies);
 extern int wlan_cmd_assert(unsigned char vif_id, unsigned int reason_code);
-extern int wlan_cmd_assert(unsigned char vif_id, unsigned int reason_code);
 #ifdef CONFIG_MACH_SAMSUNG
 extern int wlan_cmd_set_cap(unsigned int cap);
 extern int wlan_cmd_set_psm_cap(void);
+extern int wlan_cmd_set_tx_power_reduce(unsigned char vif_id, int value);
+extern int wlan_cmd_set_fcc_channel(unsigned char vif_id, int value);
 #endif
 extern void cfg80211_report_scan_frame(unsigned char vif_id, unsigned char *pData, int len);
 extern void cfg80211_report_mic_failure(unsigned char vif_id, unsigned char *pdata, int len);
@@ -439,9 +456,6 @@ extern int wlan_cmd_enable_whitelist(unsigned char vif_id, u8 *mac_addr);
 extern int wlan_cmd_disable_whitelist(unsigned char vif_id, u8 *mac_addr);
 extern int wlan_cmd_del_whitelist(unsigned char vif_id, u8 *mac_addr);
 extern int wlan_cmd_add_whitelist(unsigned char vif_id, u8 *mac_addr);
-extern int wlan_cmd_send_common_data(unsigned char vif_id, u8 *data, int data_len);
-extern int wlan_cmd_set_fcc_channel(unsigned char vif_id, int value);
 extern int wlan_cmd_set_suspend_mode(unsigned char vif_id, bool enable);
-extern int wlan_cmd_set_tx_power_reduce(unsigned char vif_id, int value);
 #endif
 

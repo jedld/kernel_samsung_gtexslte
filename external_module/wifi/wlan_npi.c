@@ -87,7 +87,7 @@ static int wlan_nl_npi_handler(struct sk_buff *skb_2,	 struct genl_info *info)
 	{
 		printkd("[%s][%d][ERROR]\n", __func__, __LINE__);
 #ifdef CONFIG_MACH_SAMSUNG
-		flag = false;
+                flag = false;
 #endif
 		goto out;
 	}

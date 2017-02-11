@@ -367,4 +367,3 @@ static const struct attribute_group mip_cmd_attr_group;
 #if MIP_USE_LPWG
 int mip_lpwg_event_handler(struct mip_ts_info *info, u8 *rbuf, u8 size);
 #endif
-
