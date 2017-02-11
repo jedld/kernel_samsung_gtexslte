@@ -325,7 +325,7 @@ A: Yes, CPU notifiers are called only when new CPUs are on-lined or offlined.
    Version 1: (Correct)
    ---------
 
-   	cpu_notifier_register_begin();
+	cpu_notifier_register_begin();
 
 		for_each_online_cpu(i) {
 			foobar_cpu_callback(&foobar_cpu_notifier,
