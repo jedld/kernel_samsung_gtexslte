@@ -284,7 +284,7 @@ static struct cpufreq_table_data sc9630_cpufreq_table_data = {
 #else
 static struct cpufreq_table_data sc9630_cpufreq_table_data = {
 	.freq_tbl = {
-		{OC1, 1540000},
+		{OC1, 1500000},
 		{NOC, 1500000},
 		{UC1, 1350000},
     {UC2, 1200000},
