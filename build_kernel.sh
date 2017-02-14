@@ -15,7 +15,7 @@ PLATFORM=sc8830
 DEFCONFIG=gtexslte_defconfig
 
 KERNEL_PATH=$(pwd)
-MODULE_PATH=${KERNEL_PATH}/modules
+MODULE_PATH=~/android-work/out/target/product/gtexslte/root/lib/modules
 EXTERNAL_MODULE_PATH=${KERNEL_PATH}/external_module
 
 JOBS=`grep processor /proc/cpuinfo | wc -l`
