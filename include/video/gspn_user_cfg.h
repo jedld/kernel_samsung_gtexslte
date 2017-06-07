@@ -19,7 +19,7 @@ this file will share with user space
 
 #ifndef _GSPN_USER_CFG_H_
 #define _GSPN_USER_CFG_H_
-
+#include <linux/types.h>
 /*
 GSP ERR CODE 0x00-0xFF
 GSPN MODE1 HW ERR CODE 0x0100-0x01FF
@@ -99,6 +99,7 @@ typedef enum _GSPN_ERR_CODE_TAG_ {
 
 typedef enum {
     GSPN_LOG_INFO=0,
+    GSPN_LOG_DBG,
     GSPN_LOG_WARN,
     GSPN_LOG_ERROR,
     GSPN_LOG_FATAL,
