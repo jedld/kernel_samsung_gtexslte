@@ -181,4 +181,6 @@ source "drivers/autotst/Kconfig"
 source "drivers/gator/Kconfig"
 
 source "drivers/cpuhotplug/Kconfig"
+
+source "drivers/trusty/Kconfig"
 endmenu

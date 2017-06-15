@@ -162,6 +162,6 @@ obj-$(CONFIG_SIPC)		+= sipc/
 obj-$(CONFIG_SENSORS)           += sensor/
 
 obj-$(CONFIG_SPRD_IQ)           += iq/
-
+obj-$(CONFIG_TRUSTY)		+= trusty/
 obj-$(CONFIG_GATOR)		+= gator/
 obj-$(CONFIG_CORESIGHT)		+= coresight/

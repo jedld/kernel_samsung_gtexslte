@@ -103,12 +103,12 @@ static int uid_stat_show(struct seq_file *m, void *v)
 		/* if this task is exiting, we have already accounted for the
 		 * time and power.
 		 */
-		// if (task->cpu_power == ULLONG_MAX)
-		// 	continue;
+		if (task->cpu_power == ULLONG_MAX)
+			continue;
 		task_cputime_adjusted(task, &utime, &stime);
 		uid_entry->active_utime += utime;
 		uid_entry->active_stime += stime;
-		// uid_entry->active_power += task->cpu_power;
+		uid_entry->active_power += task->cpu_power;
 	} while_each_thread(temp, task);
 	read_unlock(&tasklist_lock);
 
@@ -174,14 +174,15 @@ static ssize_t uid_remove_write(struct file *file,
 		kstrtol(end_uid, 10, &uid_end) != 0) {
 		return -EINVAL;
 	}
-
 	mutex_lock(&uid_lock);
 
 	for (; uid_start <= uid_end; uid_start++) {
 		hash_for_each_possible_safe(hash_table, uid_entry, tmp,
-							hash, uid_start) {
-			hash_del(&uid_entry->hash);
-			kfree(uid_entry);
+							hash, (uid_t)uid_start) {
+			if (uid_start == uid_entry->uid) {
+				hash_del(&uid_entry->hash);
+				kfree(uid_entry);
+			}
 		}
 	}
 
@@ -217,8 +218,8 @@ static int process_notifier(struct notifier_block *self,
 	task_cputime_adjusted(task, &utime, &stime);
 	uid_entry->utime += utime;
 	uid_entry->stime += stime;
-	// uid_entry->power += task->cpu_power;
-	// task->cpu_power = ULLONG_MAX;
+	uid_entry->power += task->cpu_power;
+	task->cpu_power = ULLONG_MAX;
 
 exit:
 	mutex_unlock(&uid_lock);
