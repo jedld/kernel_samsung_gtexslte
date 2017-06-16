@@ -54,9 +54,10 @@ struct sprd_iommu_ops {
 	int (*restore)(struct sprd_iommu_dev *dev);
 	void (*enable)(struct sprd_iommu_dev *dev);
 	void (*disable)(struct sprd_iommu_dev *dev);
-	int (*dump)(struct sprd_iommu_dev *dev, unsigned long iova, size_t iova_length);
+	int (*dump)(struct sprd_iommu_dev *dev, void *data);
 	void (*open)(struct sprd_iommu_dev *dev);
 	void (*release)(struct sprd_iommu_dev *dev);
+	void (*pgt_show)(struct sprd_iommu_dev *dev);
 };
 
 enum IOMMU_ID {
@@ -88,4 +89,6 @@ extern int sprd_iova_map(int iommu_id, unsigned long iova, unsigned long iova_le
 extern int sprd_iova_unmap(int iommu_id, unsigned long iova, unsigned long iova_length);
 extern void sprd_iommu_module_enable(uint32_t iommu_id);
 extern void sprd_iommu_module_disable(uint32_t iommu_id);
+extern void sprd_iommu_pgt_show(uint32_t iommu_id);
+extern int sprd_iommu_pgt_dump(uint32_t iommu_id, void *data);
 #endif
