@@ -19,7 +19,6 @@ void sprd_iommu_vpp_clk_enable(struct sprd_iommu_dev *dev)
 {
 	pr_info("%s\n", __func__);
 #ifndef CONFIG_SC_FPGA
-	clk_prepare_enable(dev->mmu_mclock);
 	clk_prepare_enable(dev->mmu_clock);
 #endif
 }
@@ -29,7 +28,6 @@ void sprd_iommu_vpp_clk_disable(struct sprd_iommu_dev *dev)
 	pr_info("%s\n", __func__);
 #ifndef CONFIG_SC_FPGA
 	clk_disable_unprepare(dev->mmu_clock);
-	clk_disable_unprepare(dev->mmu_mclock);
 #endif
 }
 
@@ -53,11 +51,10 @@ int sprd_iommu_vpp_init(struct sprd_iommu_dev *dev,
 		return -1;
 
 	dev->mmu_clock = of_clk_get(np, 0);
-	dev->mmu_mclock = of_clk_get(np, 1);
 
-	if (IS_ERR(dev->mmu_clock) || IS_ERR(dev->mmu_mclock)) {
-		pr_info("%s, can't get clock:%p, %p\n", __func__,
-			dev->mmu_clock, dev->mmu_mclock);
+	if (IS_ERR(dev->mmu_clock)) {
+		pr_info("%s, can't get clock:%p\n", __func__,
+			dev->mmu_clock);
 		goto errorout;
 	}
 #endif
@@ -71,9 +68,6 @@ int sprd_iommu_vpp_init(struct sprd_iommu_dev *dev,
 errorout:
 	if (dev->mmu_clock)
 		clk_put(dev->mmu_clock);
-
-	if (dev->mmu_mclock)
-		clk_put(dev->mmu_mclock);
 
 	return -1;
 #endif
@@ -168,11 +162,16 @@ int sprd_iommu_vpp_restore(struct sprd_iommu_dev *dev)
 	return err;
 }
 
-int sprd_iommu_vpp_dump(struct sprd_iommu_dev *dev, unsigned long iova,
-			size_t iova_length)
+int sprd_iommu_vpp_dump(struct sprd_iommu_dev *dev, void *data)
 {
-	return sprd_iommu_dump(dev, iova, iova_length);
+	return 0;
 }
+
+void sprd_iommu_vpp_pgt_show(struct sprd_iommu_dev *dev)
+{
+	return iommu_pgt_show(dev);
+}
+
 
 struct sprd_iommu_ops iommu_vpp_ops = {
 	.init = sprd_iommu_vpp_init,
@@ -188,5 +187,6 @@ struct sprd_iommu_ops iommu_vpp_ops = {
 	.dump = sprd_iommu_vpp_dump,
 	.open = sprd_iommu_vpp_open,
 	.release = sprd_iommu_vpp_release,
+	.pgt_show = sprd_iommu_vpp_pgt_show,
 };
 
