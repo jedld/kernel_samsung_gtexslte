@@ -34,7 +34,7 @@ function build_kernel() {
 	mkdir -p ${MODULE_PATH}
 
 	find ${KERNEL_PATH}/drivers -name "*.ko" -exec cp -f {} ${MODULE_PATH} \;
-	find ${EXTERNAL_MODULE_PATH} -name "*.ko" -exec cp -f {} ${MODULE_PATH} \;
+	find -L ${EXTERNAL_MODULE_PATH} -name "*.ko" -exec cp -f {} ${MODULE_PATH} \;
 }
 
 function clean() {
