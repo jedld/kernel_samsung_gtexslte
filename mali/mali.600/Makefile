@@ -91,7 +91,7 @@ include $(KDIR)/.config
 
 ifeq ($(ARCH), arm)
 # when compiling for ARM we're cross compiling
-export CROSS_COMPILE ?= $(call check_cc2, arm-linux-gnueabi-gcc, arm-linux-gnueabi-, arm-eabi-)
+export CROSS_COMPILE ?= $(call check_cc2, arm-linux-androideabi-gcc, arm-linux-androideabi-, arm-eabi-)
 endif
 
 # report detected/selected settings
