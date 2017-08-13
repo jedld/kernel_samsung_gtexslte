@@ -52,7 +52,7 @@
 #define kernel_config_data_size \
 	(sizeof(kernel_config_data) - 1 - MAGIC_SIZE * 2)
 
-#ifdef CONFIG_IKCONFIG_PROC
+// #ifdef CONFIG_IKCONFIG_PROC
 
 static ssize_t
 ikconfig_read_current(struct file *file, char __user *buf,
@@ -92,7 +92,7 @@ static void __exit ikconfig_cleanup(void)
 module_init(ikconfig_init);
 module_exit(ikconfig_cleanup);
 
-#endif /* CONFIG_IKCONFIG_PROC */
+// #endif /* CONFIG_IKCONFIG_PROC */
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Randy Dunlap");
