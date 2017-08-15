@@ -89,10 +89,6 @@ KDIR-$(shell uname -m):=/lib/modules/$(shell uname -r)/build
 
 include $(KDIR)/.config
 
-ifeq ($(ARCH), arm)
-# when compiling for ARM we're cross compiling
-export CROSS_COMPILE=/home/jedld/linaro/toolchain/bin/arm-eabi-
-endif
 
 # report detected/selected settings
 ifdef ARM_INTERNAL_BUILD

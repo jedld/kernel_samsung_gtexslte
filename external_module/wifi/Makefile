@@ -27,8 +27,6 @@ else
 # Define host system directory
 KDIR-$(shell uname -m):=/lib/modules/$(shell uname -r)/build
 
-export CROSS_COMPILE=/home/jedld/linaro/toolchain/bin/arm-eabi-
-
 
 # default cpu to select
 CPU ?= $(shell uname -m)
