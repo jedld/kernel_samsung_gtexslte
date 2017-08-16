@@ -113,7 +113,7 @@ static int SM5701_get_charging_status(struct SM5701_charger_data *charger)
 	int full_check_type;
 
 	SM5701_reg_read(charger->SM5701->i2c, SM5701_STATUS2, &stat2);
-	pr_info("%s : SM5701_STATUS2 : 0x%02x\n", __func__, stat2);
+	// pr_info("%s : SM5701_STATUS2 : 0x%02x\n", __func__, stat2);
 
 //	Clear interrupt register 2
 	SM5701_reg_read(charger->SM5701->i2c, SM5701_INT2, &cln);
@@ -226,8 +226,8 @@ static int SM5701_get_charging_health(struct SM5701_charger_data *charger)
 	SM5701_reg_read(charger->SM5701->i2c, SM5701_INT2, &cln_int2);
 	SM5701_reg_read(charger->SM5701->i2c, SM5701_INT1, &cln_int1);
 
-	pr_info("%s : Health, SM5701_STATUS1 : 0x%02x, SM5701_STATUS2 : 0x%02x\n", __func__, stat1, stat2);
-	pr_info("%s : Health, SM5701_INT1 : 0x%02x, SM5701_INT2 : 0x%02x\n", __func__, cln_int1, cln_int2);
+	// pr_info("%s : Health, SM5701_STATUS1 : 0x%02x, SM5701_STATUS2 : 0x%02x\n", __func__, stat1, stat2);
+	// pr_info("%s : Health, SM5701_INT1 : 0x%02x, SM5701_INT2 : 0x%02x\n", __func__, cln_int1, cln_int2);
 
 	mask = charger->dev_id < 3 ? OP_MODE_CHG_ON : OP_MODE_CHG_ON_REV3;
 	chg_en &= ~mask;
@@ -314,7 +314,7 @@ static u8 sm5701_get_float_voltage(struct SM5701_charger_data *charger)
 
 	SM5701_reg_read(charger->SM5701->i2c, SM5701_CHGCNTL3, &data);
 	data &= 0x1F;
-	pr_info("%s: battery cv voltage 0x%x\n", __func__, data);
+	// pr_info("%s: battery cv voltage 0x%x\n", __func__, data);
 
 	return data;
 }
@@ -707,7 +707,7 @@ static void SM5701_charger_initialize(struct SM5701_charger_data *charger)
 	/* Operating Frequency in PWM BUCK mode : 2.4KHz */
 	SM5701_reg_read(charger->SM5701->i2c, SM5701_CNTL, &reg_data);
 	reg_data &= ~0xC0;
-#if defined(CONFIG_MACH_J1MINILTE) || defined(CONFIG_MACH_J1ACEVELTE) 
+#if defined(CONFIG_MACH_J1MINILTE) || defined(CONFIG_MACH_J1ACEVELTE)
 		reg_data |= (FREQ_12 | 0x4);
 #else
 		reg_data |= (FREQ_24 | 0x4);
@@ -1151,7 +1151,7 @@ static int SM5701_charger_probe(struct platform_device *pdev)
 		pr_err("%s: Failed to Register otg_chg\n", __func__);
 		goto err_power_supply_register_otg;
 	}
-	
+
 	SM5701_set_charger_data(charger);
 	if (charger->pdata->chg_irq) {
 		INIT_DELAYED_WORK(&charger->isr_work, SM5701_isr_work);
@@ -1265,4 +1265,3 @@ MODULE_DESCRIPTION("SILICONMITUS SM5701 Charger Driver");
 MODULE_AUTHOR("Samsung Electronics");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("platform:SM5701_charger");
-
