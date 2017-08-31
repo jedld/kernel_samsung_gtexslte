@@ -31,7 +31,6 @@
 
 
  /*
-/*
  * Memory returned by kmalloc() may be used for DMA, so we must make
  * sure that all such allocations are cache aligned. Otherwise,
  * unrelated code may cause parts of the buffer to be read into the
