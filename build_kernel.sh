@@ -27,13 +27,6 @@ function build_kernel() {
 	make modules
 	make dtbs
 	./scripts/mkdtimg.sh -i ${KERNEL_PATH}/arch/arm/boot/dts/ -o dt.img
-	make -C ${EXTERNAL_MODULE_PATH}/wifi KDIR=${KERNEL_PATH}
-
-	[ -d ${MODULE_PATH} ] && rm -rf ${MODULE_PATH}
-	mkdir -p ${MODULE_PATH}
-
-	find ${KERNEL_PATH}/drivers -name "*.ko" -exec cp -f {} ${MODULE_PATH} \;
-	find -L ${EXTERNAL_MODULE_PATH} -name "*.ko" -exec cp -f {} ${MODULE_PATH} \;
 }
 
 function clean() {

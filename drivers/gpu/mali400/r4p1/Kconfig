@@ -12,7 +12,7 @@
 config MALI_PLATFORM_SC8830
 	bool "Enable Mali support for SC8830 platform"
 	depends on MALI400
-        default y
+  default y
 	---help---
 	  This enables Mali support for SC8830 platform.
 
@@ -70,7 +70,7 @@ config MALI_DMA_BUF_MAP_ON_ATTACH
 config MALI_SHARED_INTERRUPTS
 	bool "Support for shared interrupts"
 	depends on MALI400
-	default n
+	default y
 	---help---
 	  Adds functionality required to properly support shared interrupts.  Without this support,
 	  the device driver will fail during insmod if it detects shared interrupts.  This also
@@ -89,8 +89,8 @@ config MALI_PMU_PARALLEL_POWER_UP
 
 config MALI_DT
 	bool "Using device tree to initialize module"
-	depends on MALI400 && CONFIG_OF
-	default n
+	depends on MALI400
+	default y
 	---help---
 	  This enable the Mali driver to choose the device tree path to get platform resoures
 	  and disable the old config method. Mali driver could run on the platform which the
