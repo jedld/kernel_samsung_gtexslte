@@ -205,10 +205,14 @@ int sprd_iommu_gsp_restore(struct sprd_iommu_dev *dev)
 #endif
 }
 
-int sprd_iommu_gsp_dump(struct sprd_iommu_dev *dev, unsigned long iova,
-			size_t iova_length)
+int sprd_iommu_gsp_dump(struct sprd_iommu_dev *dev, void *data)
 {
-	return sprd_iommu_dump(dev, iova, iova_length);
+	return 0;
+}
+
+void sprd_iommu_gsp_pgt_show(struct sprd_iommu_dev *dev)
+{
+	return iommu_pgt_show(dev);
 }
 
 struct sprd_iommu_ops iommu_gsp_ops = {
@@ -225,5 +229,6 @@ struct sprd_iommu_ops iommu_gsp_ops = {
 	.dump = sprd_iommu_gsp_dump,
 	.open = sprd_iommu_gsp_open,
 	.release = sprd_iommu_gsp_release,
+	.pgt_show = sprd_iommu_gsp_pgt_show,
 };
 

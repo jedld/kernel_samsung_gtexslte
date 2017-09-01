@@ -23,7 +23,7 @@
 #include <linux/spinlock.h>
 #include <linux/uaccess.h>
 #include <linux/alarmtimer.h>
-#include "android_alarm.h"
+#include "uapi/android_alarm.h"
 
 #define ANDROID_ALARM_PRINT_INFO (1U << 0)
 #define ANDROID_ALARM_PRINT_IO (1U << 1)
@@ -254,8 +254,9 @@ static long alarm_do_ioctl(struct file *file, unsigned int cmd,
 		break;
 	case ANDROID_ALARM_WAIT_CHANGE:
 		{
-			if (wait_event_interruptible(alarm_wait_change_queue, delta)) {
-				rv = -ERESTARTSYS;
+			rv = wait_event_interruptible(alarm_wait_change_queue, delta);
+			if (rv == -ERESTARTSYS) {
+			    rv = -EINTR;
 			}
 			break;			
 		}
@@ -299,16 +300,17 @@ static long alarm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		break;
 	case ANDROID_ALARM_WAIT_CHANGE:
 		{
+            int delta_t = 0;
 			unsigned long flags;
 			spin_lock_irqsave(&alarm_slock, flags);
-			if (copy_to_user((void __user *)arg, &delta, 4)) {
+            delta_t = delta;
+            spin_unlock_irqrestore(&alarm_slock, flags);
+			if (copy_to_user((void __user *)arg, &delta_t, sizeof(delta_t))) {
 			    rv = -EFAULT;
 				delta = 0;
-			    spin_unlock_irqrestore(&alarm_slock, flags);
 				return rv;
 			}
 			delta = 0;
-			spin_unlock_irqrestore(&alarm_slock, flags);
 			break;
 		}
 	}
@@ -346,17 +348,18 @@ static long alarm_compat_ioctl(struct file *file, unsigned int cmd,
 		break;
 	case ANDROID_ALARM_WAIT_CHANGE:
 		{
+            int delta_t = 0;
 			unsigned long flags;
 			spin_lock_irqsave(&alarm_slock, flags);
-			if (copy_to_user((void __user *)arg, &delta, 4)) {
-				rv = -EFAULT;
+            delta_t = delta;
+            spin_unlock_irqrestore(&alarm_slock, flags);
+			if (copy_to_user((void __user *)arg, &delta_t, sizeof(delta_t))) {
+			    rv = -EFAULT;
 				delta = 0;
-				spin_unlock_irqrestore(&alarm_slock, flags);
 				return rv;
 			}
 			delta = 0;
-			spin_unlock_irqrestore(&alarm_slock, flags);
-			break;
+			break;            
 		}
 	}
 
@@ -377,7 +380,21 @@ static int alarm_release(struct inode *inode, struct file *file)
 
 	spin_lock_irqsave(&alarm_slock, flags);
 	if (file->private_data) {
-		for (i = 0; i < ANDROID_ALARM_TYPE_COUNT; i++) {
+		for (i = 0; i < ANDROID_ALARM_POWER_ON_WAKEUP; i++) {
+			uint32_t alarm_type_mask = 1U << i;
+			if (alarm_enabled & alarm_type_mask) {
+				alarm_dbg(INFO,
+					  "%s: clear alarm, pending %d\n",
+					  __func__,
+					  !!(alarm_pending & alarm_type_mask));
+				alarm_enabled &= ~alarm_type_mask;
+			}
+			spin_unlock_irqrestore(&alarm_slock, flags);
+			devalarm_cancel(&alarms[i]);
+			spin_lock_irqsave(&alarm_slock, flags);
+		}
+		for (i = ANDROID_ALARM_SYSTEMTIME; i <
+			ANDROID_ALARM_TYPE_COUNT; i++) {
 			uint32_t alarm_type_mask = 1U << i;
 			if (alarm_enabled & alarm_type_mask) {
 				alarm_dbg(INFO,

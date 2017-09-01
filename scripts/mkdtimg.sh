@@ -50,11 +50,13 @@ if ((${#dts_array[@]} == 0)); then
 fi
 
 echo "input: ${dts_array[@]}"
-echo "output: $dtimg"
+echo "output -: $dtimg"
 
 for dts_file in ${dts_array[@]}; do
+	echo "$dts_file"
 	if [ -e $dts_file ]; then
-		$TOOL_DTC -I dts -O dtb $dts_file -o $(pwd)/arch/arm/boot/dts/$dts_file.dtb
+		echo "processing $dts_file"
+		$output_prefix/scripts/dtc/dtc -I dts -O dtb $dts_file -o $output_prefix/arch/arm/boot/dts/$dts_file.dtb
 	fi
 done
 

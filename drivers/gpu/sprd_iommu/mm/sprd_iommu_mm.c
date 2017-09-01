@@ -244,10 +244,38 @@ int sprd_iommu_mm_restore(struct sprd_iommu_dev *dev)
 	return err;
 }
 
-int sprd_iommu_mm_dump(struct sprd_iommu_dev *dev, unsigned long iova,
-			size_t iova_length)
+int sprd_iommu_mm_dump(struct sprd_iommu_dev *dev, void *data)
 {
-	return sprd_iommu_dump(dev, iova, iova_length);
+	int ret = 0;
+
+	mutex_lock(&dev->mutex_map);
+	if (dev->light_sleep_en) {
+		if (dev->map_count > 0) {
+			sprd_iommu_mm_clk_enable(dev);
+			mutex_lock(&dev->mutex_pgt);
+			memcpy(data, (void *)dev->init_data->pgt_base,
+					dev->init_data->pgt_size);
+			mutex_unlock(&dev->mutex_pgt);
+			sprd_iommu_mm_clk_disable(dev);
+			ret = dev->init_data->pgt_size;
+		}
+	} else {
+		if (dev->map_count > 0) {
+			mutex_lock(&dev->mutex_pgt);
+			memcpy(data, (void *)dev->init_data->pgt_base,
+					dev->init_data->pgt_size);
+			mutex_unlock(&dev->mutex_pgt);
+			ret = dev->init_data->pgt_size;
+		}
+	}
+	mutex_unlock(&dev->mutex_map);
+
+	return ret;
+}
+
+void sprd_iommu_mm_pgt_show(struct sprd_iommu_dev *dev)
+{
+	return iommu_pgt_show(dev);
 }
 
 struct sprd_iommu_ops iommu_mm_ops = {
@@ -264,5 +292,6 @@ struct sprd_iommu_ops iommu_mm_ops = {
 	.dump = sprd_iommu_mm_dump,
 	.open = sprd_iommu_mm_open,
 	.release = sprd_iommu_mm_release,
+	.pgt_show = sprd_iommu_mm_pgt_show,
 };
 

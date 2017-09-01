@@ -156,16 +156,18 @@ int sprd_iommu_init(struct sprd_iommu_dev *dev,
 			((u32 *)p)[i] = 0xDEADDEAD;
 	}
 	sprd_iommu_pgt_reset(data);
-
+#ifdef SPRD_IOMMU_SUSPEND
 	dev->pgt = __get_free_pages(GFP_KERNEL, get_order(data->pgt_size));
 	if (!dev->pgt) {
 		pr_err("%s get_free_pages fail\n", data->name);
 		return -1;
 	}
-
+#endif
 	dev->pool = gen_pool_create(12, -1);
 	if (!dev->pool) {
+#ifdef SPRD_IOMMU_SUSPEND
 		free_pages((ulong)dev->pgt, get_order(data->pgt_size));
+#endif
 		pr_err("%s gen_pool_create error\n", data->name);
 		return -1;
 	}
@@ -199,7 +201,9 @@ int sprd_iommu_exit(struct sprd_iommu_dev *dev)
 {
 	sprd_iommu_reg_clear(dev->init_data);
 	gen_pool_destroy(dev->pool);
+#ifdef SPRD_IOMMU_SUSPEND
 	free_pages(dev->pgt, get_order(dev->init_data->pgt_size));
+#endif
 	dev->pgt = 0;
 	return 0;
 }
@@ -299,8 +303,10 @@ int sprd_iommu_iova_unmap(struct sprd_iommu_dev *dev, ulong iova,
 int sprd_iommu_backup(struct sprd_iommu_dev *dev)
 {
 	mutex_lock(&dev->mutex_pgt);
+#ifdef SPRD_IOMMU_SUSPEND
 	memcpy((ulong *)dev->pgt, (ulong *)dev->init_data->pgt_base,
 		dev->init_data->pgt_size);
+#endif
 	sprd_iommu_reg_clear(dev->init_data);
 	mutex_unlock(&dev->mutex_pgt);
 
@@ -311,8 +317,18 @@ int sprd_iommu_restore(struct sprd_iommu_dev *dev)
 {
 	mutex_lock(&dev->mutex_pgt);
 	mmu_reg_write(dev->init_data->ctrl_reg, MMU_EN(0), MMU_EN_MASK);
+#ifdef SPRD_IOMMU_SUSPEND
+#ifdef CONFIG_TRUSTY
+	int i;
+	for (i = 0; i < dev->init_data->pgt_size / sizeof(u32); i++) {
+		__set_pte(dev->init_data, dev->init_data->pgt_base, i,
+				((ulong *)(dev->pgt))[i]);
+	}
+#else
 	memcpy((ulong *)dev->init_data->pgt_base, (ulong *)dev->pgt,
 		dev->init_data->pgt_size);
+#endif
+#endif
 	sprd_iommu_reg_init(dev->init_data);
 	mutex_unlock(&dev->mutex_pgt);
 
@@ -345,5 +361,55 @@ void sprd_iommu_reset_enable(struct sprd_iommu_dev *dev)
 
 int sprd_iommu_dump(struct sprd_iommu_dev *dev, ulong iova, size_t iova_length)
 {
+	return 0;
+}
+
+void iommu_pgt_show(struct sprd_iommu_dev *dev)
+{
+	unsigned long i = 0;
+
+	printk("%s pgt_base:0x%lx pgt_size:0x%zx iova_base:0x%lx iova_size:0x%zx\n",
+		dev->init_data->name,
+		dev->init_data->pgt_base, dev->init_data->pgt_size,
+		dev->init_data->iova_base, dev->init_data->iova_size);
+
+	mutex_lock(&dev->mutex_map);
+	if (dev->light_sleep_en) {
+		if (0 == dev->map_count) {
+			dev->ops->enable(dev);
+			dev->ops->open(dev);
+		} else {
+			dev->ops->enable(dev);
+		}
+	} else {
+		if (0 == dev->map_count)
+			dev->ops->enable(dev);
+	}
+
+	mutex_lock(&dev->mutex_pgt);
+	for (i = 0; i < (dev->init_data->pgt_size >> 2); i++) {
+		if (i % 20 == 0) {
+			printk("\n0x%lx[0x%lx]: ",
+				dev->init_data->pgt_base + i*4,
+				dev->init_data->iova_base + i*4096);
+		}
+		printk("%x,",
+			*(((uint32_t *)dev->init_data->pgt_base) + i));
+	}
+	mutex_unlock(&dev->mutex_pgt);
+
+	if (dev->light_sleep_en) {
+		if (0 == dev->map_count) {
+			dev->ops->release(dev);
+			dev->ops->disable(dev);
+		} else {
+			dev->ops->disable(dev);
+		}
+	} else {
+		if (0 == dev->map_count)
+			dev->ops->disable(dev);
+	}
+	mutex_unlock(&dev->mutex_map);
+
 	return 0;
 }

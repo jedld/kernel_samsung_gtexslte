@@ -17,6 +17,7 @@
 #include <linux/scatterlist.h>
 #include <linux/of.h>
 
+#define SPRD_IOMMU_SUSPEND
 #define OFFSET_CFG                     0x4
 #define OFFSET_START_MB_ADDR_LO        0x8
 #define OFFSET_START_MB_ADDR_HI        0xC
@@ -140,5 +141,7 @@ void sprd_iommu_enable(struct sprd_iommu_dev *dev);
 void sprd_iommu_reset_enable(struct sprd_iommu_dev *dev);
 
 int sprd_iommu_dump(struct sprd_iommu_dev *dev, unsigned long iova, size_t iova_length);
+
+void iommu_pgt_show(struct sprd_iommu_dev *dev);
 
 #endif

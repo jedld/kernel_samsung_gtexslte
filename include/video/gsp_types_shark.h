@@ -141,7 +141,7 @@ extern   "C"
 
     typedef enum _GSP_ERR_CODE_TAG_
     {
-    	/*GSP HW defined err code, start*/
+        /*GSP HW defined err code, start*/
         GSP_NO_ERR = 0,
         GSP_DES_SIZE_ERR = 1,
         GSP_SCL_OUT_RNG_ERR = 2,
@@ -165,7 +165,7 @@ extern   "C"
         GSP_ALL_MODULE_DISABLE_ERR = 20,
         /*GSP HW defined err code, end*/
 
-		/*GSP kernel driver defined err code, start*/
+        /*GSP kernel driver defined err code, start*/
         GSP_KERNEL_FULL = 0x81,//kernel driver only supports GSP_MAX_USER clients
         GSP_KERNEL_OPEN_INTR = 0x82,//wait open semaphore, interrupt by signal
         GSP_KERNEL_CFG_INTR = 0x83,//wait hw semaphore, interrupt by signal
@@ -178,20 +178,21 @@ extern   "C"
         GSP_KERNEL_GEN_ALLOC_ERR = 0x8A,
         GSP_KERNEL_GEN_COMMON_ERR = 0x8B,
         GSP_KERNEL_WAITDONE_TIMEOUT = 0x8C,
-        GSP_KERNEL_WAITDONE_INTR = 0x8D,
+        GSP_KERNEL_WAITDONE_INTR = 0x8D,        
         GSP_KERNEL_FORCE_EXIT = 0x8E,//not an err
         GSP_KERNEL_CTL_CMD_ERR = 0x8F,//not an err
         GSP_KERNEL_ADDR_MAP_ERR = 0x90,//iommu map err
         GSP_KERNEL_CLOCK_ERR = 0x91,//gsp relative clock check failed
+        GSP_KERNEL_BUFFER_FENCE_ERR = 0x92, //gsp input/output buffer fence error_code
         /*GSP kernel driver defined err code, end*/
+        
+        /*GSP HAL defined err code, start*/
 
-		/*GSP HAL defined err code, start*/
-
-		GSP_HAL_PARAM_ERR = 0xA0,// common hal interface parameter err
-		GSP_HAL_PARAM_CHECK_ERR = 0xA1,// GSP config parameter check err
-		GSP_HAL_VITUAL_ADDR_NOT_SUPPORT = 0xA2,// GSP can't process virtual address
-		GSP_HAL_ALLOC_ERR = 0xA3,
-		GSP_HAL_KERNEL_DRIVER_NOT_EXIST = 0xA4,// gsp driver nod not exist
+        GSP_HAL_PARAM_ERR = 0xA0,// common hal interface parameter err
+        GSP_HAL_PARAM_CHECK_ERR = 0xA1,// GSP config parameter check err
+        GSP_HAL_VITUAL_ADDR_NOT_SUPPORT = 0xA2,// GSP can't process virtual address
+        GSP_HAL_ALLOC_ERR = 0xA3,
+        GSP_HAL_KERNEL_DRIVER_NOT_EXIST = 0xA4,// gsp driver nod not exist
         /*GSP HAL defined err code, end*/
 
         GSP_ERR_MAX_NUM,
@@ -271,14 +272,17 @@ extern   "C"
     }
     GSP_DATA_ADDR_T;
 
-	typedef struct _GSP_MEM_INFO
-	{
-		uint8_t is_pa;
-		int32_t share_fd;
-		uint32_t uv_offset;
-		uint32_t v_offset;
-	}
-	GSP_MEM_INFO;
+    typedef struct _GSP_MEM_INFO
+    {
+        uint8_t is_pa;
+        int32_t share_fd;
+        uint32_t uv_offset;
+        uint32_t v_offset;
+#ifdef CONFIG_VIDEO_GSPN_SPRD
+        struct dma_buf *dmabuf;
+#endif
+    }
+    GSP_MEM_INFO;
 
 
     typedef struct _GSP_LAYER0_CONFIG_INFO_TAG_
@@ -292,7 +296,7 @@ extern   "C"
         GSP_ENDIAN_INFO_PARAM_T     endian_mode;
         GSP_LAYER_SRC_DATA_FMT_E        img_format;
         GSP_ROT_ANGLE_E             rot_angle;
-		GSP_MEM_INFO                mem_info;
+        GSP_MEM_INFO                mem_info;
         uint8_t                         row_tap_mode;
         uint8_t                         col_tap_mode;
         uint8_t                         alpha;
@@ -316,7 +320,7 @@ extern   "C"
         GSP_ENDIAN_INFO_PARAM_T     endian_mode;
         GSP_LAYER_SRC_DATA_FMT_E        img_format;
         GSP_ROT_ANGLE_E             rot_angle;
-		GSP_MEM_INFO                mem_info;
+        GSP_MEM_INFO                mem_info;
         uint8_t                         row_tap_mode;
         uint8_t                         col_tap_mode;
         uint8_t                         alpha;
@@ -334,7 +338,7 @@ extern   "C"
         uint32_t                            pitch;
         GSP_ENDIAN_INFO_PARAM_T     endian_mode;
         GSP_LAYER_DST_DATA_FMT_E        img_format;
-		GSP_MEM_INFO                mem_info;
+        GSP_MEM_INFO                mem_info;
         uint8_t                        compress_r8_en;
         //uint8_t                      layer_en;
     }
@@ -343,11 +347,11 @@ extern   "C"
     typedef struct _GSP_MISC_CONFIG_INFO_TAG_
     {
         uint8_t                        dithering_en;
-		uint8_t                        gsp_gap;//gsp ddr gap(0~255)
-		uint8_t                        gsp_clock;//gsp clock(0:96M 1:153.6M 2:192M 3:256M)
-		uint8_t                        ahb_clock;//ahb clock(0:26M 1:76M 2:128M 3:192M)
-		uint8_t                        split_pages;//0:not split  1: split
-		uint8_t                        y2r_opt;// 0 : full YUV;  1:reduce YUV
+        uint8_t                        gsp_gap;//gsp ddr gap(0~255)
+        uint8_t                        gsp_clock;//gsp clock(0:96M 1:153.6M 2:192M 3:256M)
+        uint8_t                        ahb_clock;//ahb clock(0:26M 1:76M 2:128M 3:192M)
+        uint8_t                        split_pages;//0:not split  1: split
+        uint8_t                        y2r_opt;// 0 : full YUV;  1:reduce YUV
     }
     GSP_MISC_CONFIG_INFO_T;
 
@@ -357,7 +361,10 @@ extern   "C"
         GSP_MISC_CONFIG_INFO_T          misc_info;
         GSP_LAYER0_CONFIG_INFO_T        layer0_info;
         GSP_LAYER1_CONFIG_INFO_T        layer1_info;
-        GSP_LAYER_DES_CONFIG_INFO_T layer_des_info;
+        GSP_LAYER_DES_CONFIG_INFO_T     layer_des_info;
+#ifdef CONFIG_VIDEO_GSPN_SPRD
+        uint8_t                         async; //0: sync; 1:async
+#endif
     }
     GSP_CONFIG_INFO_T;
 

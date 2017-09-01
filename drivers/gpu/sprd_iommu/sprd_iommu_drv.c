@@ -181,6 +181,16 @@ void sprd_iommu_module_disable(uint32_t iommu_id)
 	}
 }
 
+void sprd_iommu_pgt_show(uint32_t iommu_id)
+{
+	iommu_devs[iommu_id]->ops->pgt_show(iommu_devs[iommu_id]);
+}
+
+int sprd_iommu_pgt_dump(uint32_t iommu_id, void *data)
+{
+	return iommu_devs[iommu_id]->ops->dump(iommu_devs[iommu_id], data);
+}
+
 static int sprd_iommu_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	int err = -1;
@@ -318,7 +328,13 @@ static int sprd_iommu_probe(struct platform_device *pdev)
 	}
 	pr_info("%s, function name is %s\n", __func__, pdesc);
 
-	if (0 == strncmp("sprd_iommu_gsp", pdesc, 14)) {
+	if (0 == strncmp("sprd_iommu_gsp0", pdesc, 15)) {
+		pdata = &sprd_iommu_gsp0_data;
+		iommu_dev->ops = &iommu_gsp0_ops;
+	} else if (0 == strncmp("sprd_iommu_gsp1", pdesc, 15)) {
+		pdata = &sprd_iommu_gsp1_data;
+		iommu_dev->ops = &iommu_gsp1_ops;
+	} else if (0 == strncmp("sprd_iommu_gsp", pdesc, 14)) {
 		pdata = &sprd_iommu_gsp_data;
 		iommu_dev->ops = &iommu_gsp_ops;
 	} else if (0 == strncmp("sprd_iommu_mm", pdesc, 13)) {
@@ -333,12 +349,6 @@ static int sprd_iommu_probe(struct platform_device *pdev)
 	} else if (0 == strncmp("sprd_iommu_dispc", pdesc, 16)) {
 		pdata = &sprd_iommu_dispc_data;
 		iommu_dev->ops = &iommu_dispc_ops;
-	} else if (0 == strncmp("sprd_iommu_gsp0", pdesc, 15)) {
-		pdata = &sprd_iommu_gsp0_data;
-		iommu_dev->ops = &iommu_gsp0_ops;
-	} else if (0 == strncmp("sprd_iommu_gsp1", pdesc, 15)) {
-		pdata = &sprd_iommu_gsp1_data;
-		iommu_dev->ops = &iommu_gsp1_ops;
 	} else if (0 == strncmp("sprd_iommu_vpp", pdesc, 14)) {
 		pdata = &sprd_iommu_vpp_data;
 		iommu_dev->ops = &iommu_vpp_ops;

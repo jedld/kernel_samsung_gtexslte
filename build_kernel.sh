@@ -8,7 +8,7 @@
 set -e -o pipefail
 
 # export CROSS_COMPILE=~/android-work/prebuilts/gcc/linux-x86/arm/arm-eabi-4.8/bin/arm-eabi-
-export CROSS_COMPILE=/home/jedld/linaro/toolchain/bin/arm-eabi-
+export CROSS_COMPILE=/home/jedld/linaro/toolchain/bin/arm-linux-gnueabihf-
 export ARCH=arm
 
 PLATFORM=sc8830
@@ -34,7 +34,7 @@ function build_kernel() {
 	mkdir -p ${MODULE_PATH}
 
 	find ${KERNEL_PATH}/drivers -name "*.ko" -exec cp -f {} ${MODULE_PATH} \;
-	find ${EXTERNAL_MODULE_PATH} -name "*.ko" -exec cp -f {} ${MODULE_PATH} \;
+	find -L ${EXTERNAL_MODULE_PATH} -name "*.ko" -exec cp -f {} ${MODULE_PATH} \;
 }
 
 function clean() {

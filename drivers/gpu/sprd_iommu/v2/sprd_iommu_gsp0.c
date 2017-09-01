@@ -15,41 +15,10 @@
 
 #include"../sprd_iommu_common.h"
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void sprd_iommu_gsp0_early_suspend(struct early_suspend *es)
-{
-	int err = -1;
-
-	struct sprd_iommu_dev *dev = container_of(es,
-					struct sprd_iommu_dev, early_suspend);
-
-	mutex_lock(&dev->mutex_map);
-	pr_info("%s, map_count:%d\n", __func__, dev->map_count);
-	if (dev->map_count > 0)
-		err = sprd_iommu_backup(dev);
-	mutex_unlock(&dev->mutex_map);
-}
-
-static void sprd_iommu_gsp0_late_resume(struct early_suspend *es)
-{
-	int err = -1;
-
-	struct sprd_iommu_dev *dev = container_of(es,
-					struct sprd_iommu_dev, early_suspend);
-
-	mutex_lock(&dev->mutex_map);
-	pr_info("%s, map_count:%d\n", __func__, dev->map_count);
-	if (dev->map_count > 0)
-		err = sprd_iommu_restore(dev);
-	mutex_unlock(&dev->mutex_map);
-}
-#endif
-
 void sprd_iommu_gsp0_clk_enable(struct sprd_iommu_dev *dev)
 {
 	pr_debug("%s\n", __func__);
 #ifndef CONFIG_SC_FPGA
-	clk_prepare_enable(dev->mmu_mclock);
 	clk_prepare_enable(dev->mmu_clock);
 #endif
 }
@@ -59,7 +28,6 @@ void sprd_iommu_gsp0_clk_disable(struct sprd_iommu_dev *dev)
 	pr_debug("%s\n", __func__);
 #ifndef CONFIG_SC_FPGA
 	clk_disable_unprepare(dev->mmu_clock);
-	clk_disable_unprepare(dev->mmu_mclock);
 #endif
 }
 
@@ -82,22 +50,14 @@ int sprd_iommu_gsp0_init(struct sprd_iommu_dev *dev,
 	if (!np)
 		return -1;
 
-	dev->mmu_mclock = of_clk_get(np, 0);
-	dev->mmu_clock = of_clk_get(np, 2);
+	dev->mmu_clock = of_clk_get(np, 0);
 
-	if (IS_ERR(dev->mmu_clock) || IS_ERR(dev->mmu_mclock)) {
-		pr_info("%s, can't get clock:%p, %p\n", __func__,
-			dev->mmu_clock, dev->mmu_mclock);
+	if (IS_ERR(dev->mmu_clock)) {
+		pr_info("%s, can't get clock:%p\n", __func__,
+			dev->mmu_clock);
 		goto errorout;
 	}
 #endif
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	dev->early_suspend.suspend = sprd_iommu_gsp0_early_suspend;
-	dev->early_suspend.resume  = sprd_iommu_gsp0_late_resume;
-	dev->early_suspend.level   = EARLY_SUSPEND_LEVEL_STOP_DRAWING;
-	register_early_suspend(&dev->early_suspend);
-#endif
-
 	sprd_iommu_gsp0_clk_enable(dev);
 	err = sprd_iommu_init(dev, data);
 	sprd_iommu_gsp0_clk_disable(dev);
@@ -108,9 +68,6 @@ int sprd_iommu_gsp0_init(struct sprd_iommu_dev *dev,
 errorout:
 	if (dev->mmu_clock)
 		clk_put(dev->mmu_clock);
-
-	if (dev->mmu_mclock)
-		clk_put(dev->mmu_mclock);
 
 	return -1;
 #endif
@@ -173,9 +130,6 @@ int sprd_iommu_gsp0_iova_unmap(struct sprd_iommu_dev *dev, unsigned long iova,
 
 int sprd_iommu_gsp0_backup(struct sprd_iommu_dev *dev)
 {
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	return 0;
-#else
 	int err = -1;
 
 	mutex_lock(&dev->mutex_map);
@@ -185,14 +139,10 @@ int sprd_iommu_gsp0_backup(struct sprd_iommu_dev *dev)
 	mutex_unlock(&dev->mutex_map);
 
 	return err;
-#endif
 }
 
 int sprd_iommu_gsp0_restore(struct sprd_iommu_dev *dev)
 {
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	return 0;
-#else
 	int err = -1;
 
 	mutex_lock(&dev->mutex_map);
@@ -202,13 +152,16 @@ int sprd_iommu_gsp0_restore(struct sprd_iommu_dev *dev)
 	mutex_unlock(&dev->mutex_map);
 
 	return 0;
-#endif
 }
 
-int sprd_iommu_gsp0_dump(struct sprd_iommu_dev *dev, unsigned long iova,
-			size_t iova_length)
+int sprd_iommu_gsp0_dump(struct sprd_iommu_dev *dev, void *data)
 {
-	return sprd_iommu_dump(dev, iova, iova_length);
+	return 0;
+}
+
+void sprd_iommu_gsp0_pgt_show(struct sprd_iommu_dev *dev)
+{
+	return iommu_pgt_show(dev);
 }
 
 struct sprd_iommu_ops iommu_gsp0_ops = {
@@ -225,5 +178,6 @@ struct sprd_iommu_ops iommu_gsp0_ops = {
 	.dump = sprd_iommu_gsp0_dump,
 	.open = sprd_iommu_gsp0_open,
 	.release = sprd_iommu_gsp0_release,
+	.pgt_show = sprd_iommu_gsp0_pgt_show,
 };
 
