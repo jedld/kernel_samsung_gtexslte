@@ -185,4 +185,6 @@ source "drivers/gator/Kconfig"
 source "drivers/cpuhotplug/Kconfig"
 
 source "drivers/trusty/Kconfig"
+
+source "drivers/gpu/mali400/Kconfig"
 endmenu
