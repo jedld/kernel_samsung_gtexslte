@@ -287,6 +287,6 @@ source "drivers/net/wireless/ti/Kconfig"
 source "drivers/net/wireless/zd1211rw/Kconfig"
 source "drivers/net/wireless/mwifiex/Kconfig"
 source "drivers/net/wireless/sprdwl/Kconfig"
-#source "drivers/net/wireless/sc2331/Kconfig"
+source "drivers/net/wireless/sc2331/Kconfig"
 source "drivers/net/wireless/sc2331/sc2331_mem_alloc/Kconfig"
 endif # WLAN
