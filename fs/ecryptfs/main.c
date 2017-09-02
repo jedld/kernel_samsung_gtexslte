@@ -250,7 +250,6 @@ static void ecryptfs_init_mount_crypt_stat(
 	mutex_init(&mount_crypt_stat->global_auth_tok_list_mutex);
 	mount_crypt_stat->flags |= ECRYPTFS_MOUNT_CRYPT_STAT_INITIALIZED;
 }
-
 #ifdef CONFIG_WTL_ENCRYPTION_FILTER
 static int parse_enc_file_filter_parms(
 	struct ecryptfs_mount_crypt_stat *mcs, char *str)
@@ -300,7 +299,6 @@ static int parse_enc_filter_parms(
 	return 0;
 }
 #endif
-
 /**
  * ecryptfs_parse_options
  * @sb: The ecryptfs super block
@@ -565,22 +563,25 @@ static int ecryptfs_parse_options(struct ecryptfs_sb_info *sbi, char *options,
 	}
 #else
 	if (!ecryptfs_tfm_exists(mount_crypt_stat->global_default_cipher_name,
-				 NULL)) {
+				NULL)) {
+
 		rc = ecryptfs_add_new_key_tfm(
 			NULL, mount_crypt_stat->global_default_cipher_name,
 			mount_crypt_stat->global_default_cipher_key_size);
+
 		if (rc) {
 			printk(KERN_ERR "Error attempting to initialize "
-			       "cipher with name = [%s] and key size = [%td]; "
-			       "rc = [%d]\n",
-			       mount_crypt_stat->global_default_cipher_name,
-			       mount_crypt_stat->global_default_cipher_key_size,
-			       rc);
+				   "cipher with name = [%s] and key size = [%td]; "
+				   "rc = [%d]\n",
+				   mount_crypt_stat->global_default_cipher_name,
+				   mount_crypt_stat->global_default_cipher_key_size,
+				   rc);
 			rc = -EINVAL;
 			mutex_unlock(&key_tfm_list_mutex);
 			goto out;
 		}
 	}
+
 	if ((mount_crypt_stat->flags & ECRYPTFS_GLOBAL_ENCRYPT_FILENAMES)
 	    && !ecryptfs_tfm_exists(
 		    mount_crypt_stat->global_default_fn_cipher_name, NULL)) {

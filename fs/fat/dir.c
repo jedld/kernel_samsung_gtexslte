@@ -676,11 +676,6 @@ start_filldir:
 		} else
 			inum = iunique(sb, MSDOS_ROOT_INO);
 	}
-	/*sprd add for cts*/
-	if ((inode->i_flags & S_NEED_FILTER) && (!strncmp(fill_name,".android_secure",15) ||
-					!strncmp(fill_name,".autorun.inf",12) ||
-					!strncmp(fill_name,"android_secure",14)))
-		goto record_end;
 
 	if (filldir(dirent, fill_name, fill_len, *furrfu, inum,
 		    (de->attr & ATTR_DIR) ? DT_DIR : DT_REG) < 0)

@@ -597,7 +597,7 @@ enum {
  * Flags used by ext4_discard_partial_page_buffers
  */
 #define EXT4_DISCARD_PARTIAL_PG_ZERO_UNMAPPED	0x0001
-#define EXT4_DISCARD_MIN_SECTORS 4096
+
 /*
  * ioctl commands
  */

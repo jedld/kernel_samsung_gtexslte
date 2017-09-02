@@ -1228,8 +1228,8 @@ static int fat_read_root(struct inode *inode)
 	MSDOS_I(inode)->mmu_private = inode->i_size;
 
 	fat_save_attrs(inode, ATTR_DIR);
-	inode->i_mtime.tv_sec = inode->i_atime.tv_sec = inode->i_ctime.tv_sec = 0;
-	inode->i_mtime.tv_nsec = inode->i_atime.tv_nsec = inode->i_ctime.tv_nsec = 0;
+
+	inode->i_mtime = inode->i_atime = inode->i_ctime = CURRENT_TIME_SEC;
 	set_nlink(inode, fat_subdirs(inode)+2);
 
 	return 0;
@@ -1278,7 +1278,7 @@ int fat_fill_super(struct super_block *sb, void *data, int silent, int isvfat,
 	sbi = kzalloc(sizeof(struct msdos_sb_info), GFP_KERNEL);
 	if (!sbi) {
 		fat_msg(sb, KERN_ERR, "failed to mount! (ENOMEM)");
-		ST_LOG("<%s> failed to mount! %d:%d (ENOMEM)", __func__, MAJOR(sb->s_dev), MINOR(sb->s_dev));
+		ST_LOG("<%s> failed to mount! %d:%d (ENOMEM)",__func__,MAJOR(sb->s_dev),MINOR(sb->s_dev));
 		return -ENOMEM;
 	}
 	sb->s_fs_info = sbi;
