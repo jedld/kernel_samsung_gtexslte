@@ -1510,11 +1510,12 @@ static struct dentry *ext4_lookup(struct inode *dir, struct dentry *dentry, unsi
 			print_bh(dir->i_sb, bh, 0, EXT4_BLOCK_SIZE(dir->i_sb));
 			/* for debugging */
 			brelse(bh);
-
+		
 			EXT4_ERROR_INODE(dir, "bad inode number: %u", ino);
 			return ERR_PTR(-EIO);
 		}
 		brelse(bh);
+
 		if (unlikely(ino == dir->i_ino)) {
 			EXT4_ERROR_INODE(dir, "'%.*s' linked to parent dir",
 					 dentry->d_name.len,
@@ -2887,15 +2888,6 @@ static int ext4_unlink(struct inode *dir, struct dentry *dentry)
 	if (!inode->i_nlink)
 		ext4_orphan_add(handle, inode);
 	inode->i_ctime = ext4_current_time(inode);
-	/* log unlinker's uid or first 4 bytes of comm 
-	 * to ext4_inode->i_version_hi */
-	inode->i_version &= 0x00000000FFFFFFFF;
-	if(current_uid()) {
-		inode->i_version |= (u64)current_uid() << 32;
-	} else {
-		u32 *comm = (u32 *)current->comm;
-		inode->i_version |= (u64)(*comm) << 32;
-	}
 	ext4_mark_inode_dirty(handle, inode);
 	retval = 0;
 
