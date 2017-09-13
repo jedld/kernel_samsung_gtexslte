@@ -1,6 +1,6 @@
 /*
  * Block chaining cipher operations.
- * 
+ *
  * Generic encrypt/decrypt wrapper for ciphers, handles operations across
  * multiple page boundaries by using temporary blocks.  In user context,
  * the kernel is given a chance to schedule us once per page.
@@ -9,7 +9,7 @@
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
- * Software Foundation; either version 2 of the License, or (at your option) 
+ * Software Foundation; either version 2 of the License, or (at your option)
  * any later version.
  *
  */
@@ -233,6 +233,8 @@ static int blkcipher_walk_next(struct blkcipher_desc *desc,
 		return blkcipher_walk_done(desc, walk, -EINVAL);
 	}
 
+	bsize = min(walk->blocksize, n);
+
 	walk->flags &= ~(BLKCIPHER_WALK_SLOW | BLKCIPHER_WALK_COPY |
 			 BLKCIPHER_WALK_DIFF);
 	if (!scatterwalk_aligned(&walk->in, walk->alignmask) ||
@@ -245,7 +247,6 @@ static int blkcipher_walk_next(struct blkcipher_desc *desc,
 		}
 	}
 
-	bsize = min(walk->walk_blocksize, n);
 	n = scatterwalk_clamp(&walk->in, n);
 	n = scatterwalk_clamp(&walk->out, n);
 
@@ -274,7 +275,7 @@ set_phys_lowmem:
 
 static inline int blkcipher_copy_iv(struct blkcipher_walk *walk)
 {
-	unsigned bs = walk->walk_blocksize;
+	unsigned bs = walk->blocksize;
 	unsigned aligned_bs = ALIGN(bs, walk->alignmask + 1);
 	unsigned int size = aligned_bs * 2 +
 			    walk->ivsize + max(aligned_bs, walk->ivsize) -
@@ -299,8 +300,8 @@ int blkcipher_walk_virt(struct blkcipher_desc *desc,
 			struct blkcipher_walk *walk)
 {
 	walk->flags &= ~BLKCIPHER_WALK_PHYS;
-	walk->walk_blocksize = crypto_blkcipher_blocksize(desc->tfm);
-	walk->cipher_blocksize = walk->walk_blocksize;
+	walk->blocksize = crypto_blkcipher_blocksize(desc->tfm);
+	walk->cipher_blocksize = walk->blocksize;
 	walk->ivsize = crypto_blkcipher_ivsize(desc->tfm);
 	walk->alignmask = crypto_blkcipher_alignmask(desc->tfm);
 	return blkcipher_walk_first(desc, walk);
@@ -311,8 +312,8 @@ int blkcipher_walk_phys(struct blkcipher_desc *desc,
 			struct blkcipher_walk *walk)
 {
 	walk->flags |= BLKCIPHER_WALK_PHYS;
-	walk->walk_blocksize = crypto_blkcipher_blocksize(desc->tfm);
-	walk->cipher_blocksize = walk->walk_blocksize;
+	walk->blocksize = crypto_blkcipher_blocksize(desc->tfm);
+	walk->cipher_blocksize = walk->blocksize;
 	walk->ivsize = crypto_blkcipher_ivsize(desc->tfm);
 	walk->alignmask = crypto_blkcipher_alignmask(desc->tfm);
 	return blkcipher_walk_first(desc, walk);
@@ -349,7 +350,7 @@ int blkcipher_walk_virt_block(struct blkcipher_desc *desc,
 			      unsigned int blocksize)
 {
 	walk->flags &= ~BLKCIPHER_WALK_PHYS;
-	walk->walk_blocksize = blocksize;
+	walk->blocksize = blocksize;
 	walk->cipher_blocksize = crypto_blkcipher_blocksize(desc->tfm);
 	walk->ivsize = crypto_blkcipher_ivsize(desc->tfm);
 	walk->alignmask = crypto_blkcipher_alignmask(desc->tfm);
@@ -363,7 +364,7 @@ int blkcipher_aead_walk_virt_block(struct blkcipher_desc *desc,
 				   unsigned int blocksize)
 {
 	walk->flags &= ~BLKCIPHER_WALK_PHYS;
-	walk->walk_blocksize = blocksize;
+	walk->blocksize = blocksize;
 	walk->cipher_blocksize = crypto_aead_blocksize(tfm);
 	walk->ivsize = crypto_aead_ivsize(tfm);
 	walk->alignmask = crypto_aead_alignmask(tfm);
@@ -471,6 +472,7 @@ static int crypto_init_blkcipher_ops_async(struct crypto_tfm *tfm)
 	}
 	crt->base = __crypto_ablkcipher_cast(tfm);
 	crt->ivsize = alg->ivsize;
+	crt->has_setkey = alg->max_keysize;
 
 	return 0;
 }

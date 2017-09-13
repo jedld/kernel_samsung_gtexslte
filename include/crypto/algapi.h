@@ -5,7 +5,7 @@
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
- * Software Foundation; either version 2 of the License, or (at your option) 
+ * Software Foundation; either version 2 of the License, or (at your option)
  * any later version.
  *
  */
@@ -103,7 +103,7 @@ struct blkcipher_walk {
 	unsigned int ivsize;
 
 	int flags;
-	unsigned int walk_blocksize;
+	unsigned int blocksize;
 	unsigned int cipher_blocksize;
 	unsigned int alignmask;
 };
@@ -394,4 +394,3 @@ static inline int crypto_requires_sync(u32 type, u32 mask)
 }
 
 #endif	/* _CRYPTO_ALGAPI_H */
-
