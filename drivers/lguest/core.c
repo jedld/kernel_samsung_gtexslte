@@ -111,7 +111,7 @@ static __init int map_switcher(void)
 	 * kind of pages we're mapping (kernel pages), and a pointer to our
 	 * array of struct pages.
 	 */
-	err = map_vm_area(switcher_vma, PAGE_KERNEL_EXEC, lg_switcher_pages);
+	err = map_vm_area(switcher_vma, PAGE_KERNEL_EXEC, &lg_switcher_pages);
 	if (err) {
 		printk("lguest: map_vm_area failed: %i\n", err);
 		goto free_vma;
