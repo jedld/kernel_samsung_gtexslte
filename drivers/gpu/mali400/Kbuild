@@ -23,24 +23,7 @@ MALI_UPPER_HALF_SCHEDULING ?= 1
 MALI_ENABLE_CPU_CYCLES ?= 0
 BUILD = release
 
-# For customer releases the Linux Device Drivers will be provided as ARM proprietary and GPL releases:
-# The ARM proprietary product will only include the license/proprietary directory
-# The GPL product will only include the license/gpl directory
-ifeq ($(wildcard $(src)/linux/license/gpl/*),)
-    ccflags-y += -I$(src)/linux/license/proprietary
-    ifeq ($(CONFIG_MALI400_PROFILING),y)
-        $(error Profiling is incompatible with non-GPL license)
-    endif
-    ifeq ($(CONFIG_PM_RUNTIME),y)
-        $(error Runtime PM is incompatible with non-GPL license)
-    endif
-    ifeq ($(CONFIG_DMA_SHARED_BUFFER),y)
-        $(error DMA-BUF is incompatible with non-GPL license)
-    endif
-    $(error Linux Device integration is incompatible with non-GPL license)
-else
-    ccflags-y += -I$(src)/linux/license/gpl
-endif
+
 
 ifeq ($(USING_GPU_UTILIZATION), 1)
     ifeq ($(USING_DVFS), 1)
@@ -212,7 +195,7 @@ ccflags-$(CONFIG_MALI400_UMP) += -I$(src)/../ump/include/ump
 ccflags-$(CONFIG_MALI400_DEBUG) += -DDEBUG
 
 # Use our defines when compiling
-ccflags-y += -I$(src) -I$(src)/include -I$(src)/common -I$(src)/linux -I$(src)/platform -I$(src)/platform/$(MALI_PLATFORM) -Wno-date-time
+ccflags-y += -I$(src) -I$(src)/include -I$(src)/common -I$(src)/linux -I$(src)/platform -I$(src)/linux/license/gpl -I$(src)/platform/$(MALI_PLATFORM) -Wno-date-time
 ccflags-y += -O3 -ffast-math -fgcse-lm -fgcse-sm -fsched-spec-load -fforce-addr -fsingle-precision-constant -mcpu=cortex-a7 -mtune=cortex-a7 -marm -mfpu=neon-vfpv4
 
 # Get subversion revision number, fall back to only ${MALI_RELEASE_NAME} if no svn info is available
