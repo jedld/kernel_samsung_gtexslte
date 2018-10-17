@@ -7,8 +7,8 @@
 
 set -e -o pipefail
 
-# export CROSS_COMPILE=~/android-work/prebuilts/gcc/linux-x86/arm/arm-eabi-4.8/bin/arm-eabi-
-export CROSS_COMPILE=/home/jedld/linaro/toolchain/bin/arm-linux-gnueabihf-
+export CROSS_COMPILE=~/android-work/prebuilts/gcc/linux-x86/arm/arm-eabi-4.8/bin/arm-eabi-
+# export CROSS_COMPILE=/home/jedld/linaro/toolchain/bin/arm-linux-gnueabihf-
 export ARCH=arm
 
 PLATFORM=sc8830
